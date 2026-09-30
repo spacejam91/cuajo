@@ -291,3 +291,4 @@ html[data-felt="wood"] body { background: repeating-linear-gradient(90deg, rgba(
 html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg, #2d5391 0 4px, #1f3c6c 4px 8px), #1f3c6c; }
 .settings h3 { margin-top: 20px; }
 .fixed-name { color: var(--fg-dim); }
+.friend .route { color: var(--fg-dim); font-size: 14px; }

@@ -301,6 +301,7 @@ html[data-felt="wood"] body { background: repeating-linear-gradient(90deg, rgba(
 html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg, #2d5391 0 4px, #1f3c6c 4px 8px), #1f3c6c; }
 .settings h3 { margin-top: 20px; }
 .fixed-name { color: var(--fg-dim); }
+.friend .route { color: var(--fg-dim); font-size: 14px; }
 
 </style>
 </head>
@@ -1556,7 +1557,7 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
 
   // ---------- your actions ----------
   function covered() { return mode === 'local' && (handHidden || promptSeat != null); }
-  function myTurn(phase) { return g && !dealing && g.phase === phase && g.turn === ME && isLocalHuman(ME) && !covered(); }
+  function myTurn(phase) { return g && !dealing && g.phase === phase && g.turn === ME && isLocalHuman(ME) && !covered() && !(mode === 'guest' && (!net || !net.link || net.reconnecting)); }
   /** After your own draw: the new card slides in from where it came from. */
   function landInHand(from, id) {
     const node = document.querySelector('#hand .card[data-id="' + id + '"]');
@@ -1653,6 +1654,7 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
     const partner = seat === C.partnerOf(ME);
     h.append(el('span', 'tag role' + (partner ? ' us' : ''), partner ? 'your partner' : 'opponent'));
     if (isHuman(seat)) h.append(el('span', 'tag friend', 'friend'));
+    if (net && net.role === 'host' && net.away && seat === net.friendSeat) { const aw = el('span', 'tag penalty', 'away'); aw.title = 'A computer player is filling in until they rejoin'; h.append(aw); }
     if (g.phase !== 'idle' && g.dealer === seat) h.append(el('span', 'tag dealer', 'dealer'));
     if (g.purro[seat]) h.append(el('span', 'tag purro', 'purro'));
     if (g.penalty[seat] > 0) { const pt = el('span', 'tag penalty', 'shows draws'); pt.title = 'Broken purro: draws are shown and no purro or win is allowed for ' + plural(g.penalty[seat], 'more turn'); h.append(pt); }
@@ -1680,6 +1682,7 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
     const st = document.createDocumentFragment();
     const add = (t, cls) => { const s = el(cls ? 'strong' : 'span', cls === 'strong' ? '' : cls, t); st.append(s); };
     if (notice) { add(notice, 'notice'); return st; }
+    if (mode === 'guest' && net && net.reconnecting) { add('Connection lost. Reconnecting\u2026', 'notice'); return st; }
     if (g.phase === 'idle') { add('Four players, partners across the table. Press Deal to start.'); return st; }
     if (dealing) { add(name(g.dealer) + (g.dealer === ME ? ' deal the cards\u2026' : ' is dealing\u2026')); return st; }
     if (mode === 'local' && promptSeat != null && g.phase !== 'over') { add('Pass the computer to ' + name(promptSeat) + '.'); return st; }
@@ -2328,28 +2331,29 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
   ].join('');
 
   // ---------- playing with a friend ----------
-  // Online games connect the two browsers directly (PeerJS). The host's computer runs the game and
-  // sends the guest only what that seat may see; the guest sends back its moves.
-  let peerLoading = null;
-  function loadPeerJs() {
-    if (window.Peer) return Promise.resolve();
-    if (!peerLoading) peerLoading = new Promise((res, rej) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
-      s.onload = () => (window.Peer ? res() : rej(new Error('PeerJS missing')));
-      s.onerror = () => { peerLoading = null; rej(new Error('PeerJS did not load')); };
+  // Two routes to the other computer: a direct browser-to-browser connection (PeerJS/WebRTC), and,
+  // when that cannot be made (some networks block it), a relay through three public MQTT servers at
+  // once. Relay messages are encrypted with a key made from the game code. The host's computer runs
+  // the game and sends the guest only what that seat may see; the guest sends back its moves.
+  const PEERJS_URL = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+  const MQTT_URL = 'https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js';
+  const RELAYS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
+  const ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }, { urls: 'stun:stun.cloudflare.com:3478' }] };
+  const QS = (() => { try { return new URLSearchParams(location.search); } catch (e) { return new URLSearchParams(''); } })();
+  const FORCE_RELAY = QS.get('relay') === '1';          // testing: skip the direct route
+  const PID = (() => { let p = null; try { p = sessionStorage.getItem('cuajo.pid'); } catch (e) { /* no storage */ } if (!p) { p = makeCode() + makeCode(); try { sessionStorage.setItem('cuajo.pid', p); } catch (e) { /* no storage */ } } return p; })();
+  const loaded = {};
+  function loadScript(src, globalName) {
+    if (window[globalName]) return Promise.resolve();
+    if (!loaded[src]) loaded[src] = new Promise((res, rej) => {
+      const s = document.createElement('script'); s.src = src;
+      s.onload = () => (window[globalName] ? res() : rej(new Error(globalName + ' missing')));
+      s.onerror = () => { delete loaded[src]; rej(new Error(src + ' did not load')); };
       document.head.appendChild(s);
     });
-    return peerLoading;
+    return loaded[src];
   }
-  const WEB_NOTE = 'Online play works on the website version of the game (' + PAGES_URL + ') and in the downloaded file, but not inside the Claude preview.';
-  function describePeerError(e) {
-    const t = e && e.type;
-    if (t === 'peer-unavailable') return 'No game found with that code. Check it with your friend, and make sure their game is still open.';
-    if (t === 'browser-incompatible') return 'This browser cannot make online connections. Try Chrome, Edge, Firefox or Safari.';
-    if (t === 'network' || t === 'server-error' || t === 'socket-error' || t === 'socket-closed') return 'Could not reach the connection service. ' + WEB_NOTE;
-    return 'Connection problem (' + (t || 'unknown') + '). ' + WEB_NOTE;
-  }
+  const WEB_NOTE = 'Online play works on the website (' + PAGES_URL + ') and in the downloaded file, but not inside the Claude preview.';
   function makeCode() {
     const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', a = new Uint32Array(5);
     (window.crypto || window.msCrypto).getRandomValues(a);
@@ -2359,7 +2363,81 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
     const base = /^https?:$/.test(location.protocol) && location.hostname.indexOf('claude') < 0 ? location.origin + location.pathname : PAGES_URL;
     return base + '?join=' + code;
   }
-  function send(msg) { if (net && net.conn && net.conn.open) { try { net.conn.send(msg); } catch (e) { console.error(e); } } }
+
+  // --- encryption for the relay route ---
+  async function roomKeys(code) {
+    const enc = new TextEncoder(), sha = async s => new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+    const t = await sha('cuajo-room:' + code);
+    const room = 'cuajo/v1/' + Array.from(t.slice(0, 12), b => b.toString(16).padStart(2, '0')).join('');
+    const key = await crypto.subtle.importKey('raw', await sha('cuajo-key:' + code), 'AES-GCM', false, ['encrypt', 'decrypt']);
+    return { room, key };
+  }
+  async function seal(key, obj) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj))));
+    const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12); return out;
+  }
+  async function unseal(key, bytes) {
+    const b = new Uint8Array(bytes);
+    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12) }, key, b.slice(12))));
+  }
+  /** Joins the game's relay channel on every relay server; messages go out on all of them and repeats are dropped. */
+  async function openRelay(code, role) {
+    await loadScript(MQTT_URL, 'mqtt');
+    const { room, key } = await roomKeys(code);
+    const inbox = room + (role === 'host' ? '/to-host' : '/to-guest'), outbox = room + (role === 'host' ? '/to-guest' : '/to-host');
+    const r = { kind: 'relay', me: makeCode() + makeCode(), clients: [], handlers: [], seen: {}, seq: 0, closed: false };
+    r.onMessage = fn => r.handlers.push(fn);
+    r.send = msg => {
+      if (r.closed) return;
+      seal(key, { f: r.me, s: ++r.seq, m: msg }).then(env => { for (const c of r.clients) if (c.connected) { try { c.publish(outbox, env, { qos: 0 }); } catch (e) { /* this server is down */ } } });
+    };
+    r.close = () => { r.closed = true; for (const c of r.clients) { try { c.end(true); } catch (e) { /* ignore */ } } };
+    r.servers = () => r.clients.filter(c => c.connected).length;
+    RELAYS.forEach((url, i) => {
+      const c = window.mqtt.connect(url, { clientId: 'cuajo_' + r.me + '_' + i, clean: true, connectTimeout: 7000, reconnectPeriod: 3000, keepalive: 30 });
+      c.on('connect', () => c.subscribe(inbox, { qos: 0 }));
+      c.on('message', (topic, payload) => {
+        if (topic !== inbox || r.closed) return;
+        unseal(key, payload).then(env => {
+          if (!env || !env.f || env.f === r.me || r.closed) return;
+          if (env.s <= (r.seen[env.f] || 0)) return;        // the same message through another server
+          r.seen[env.f] = env.s;
+          for (const h of r.handlers) h(env.m, env.f);
+        }, () => { /* not ours */ });
+      });
+      c.on('error', () => { /* keep trying the others */ });
+      r.clients.push(c);
+    });
+    await new Promise(res => { const t0 = Date.now(); (function wait() { if (r.servers() || Date.now() - t0 > 9000) res(); else setTimeout(wait, 100); })(); });
+    if (!r.servers()) { r.close(); throw new Error('no relay server reachable'); }
+    return r;
+  }
+  /** Wraps a direct PeerJS connection in the same shape as the relay. */
+  function directLink(conn) {
+    const l = { kind: 'direct', conn, handlers: [], closeHandlers: [], closed: false };
+    l.onMessage = fn => l.handlers.push(fn);
+    l.onClose = fn => l.closeHandlers.push(fn);
+    l.send = msg => { if (!l.closed && conn.open) { try { conn.send(msg); } catch (e) { /* closing */ } } };
+    l.close = () => { l.closed = true; try { conn.close(); } catch (e) { /* ignore */ } };
+    conn.on('data', m => { if (!l.closed) for (const h of l.handlers) h(m); });
+    conn.on('close', () => { if (!l.closed) { l.closed = true; for (const h of l.closeHandlers) h(); } });
+    return l;
+  }
+  function closeNet(n) {
+    if (!n) return;
+    try { if (n.link && n.link.direct) n.link.direct.close(); } catch (e) { /* ignore */ }
+    try { if (n.relay) n.relay.close(); } catch (e) { /* ignore */ }
+    try { if (n.peer) n.peer.destroy(); } catch (e) { /* ignore */ }
+  }
+  function send(msg) { if (net && net.link) net.link.send(msg); }
+  // Every few seconds each side says hello; after 16 s of silence the other computer counts as gone.
+  setInterval(() => {
+    if (!net || !net.link) return;
+    net.link.send({ t: 'ping' });
+    if (Date.now() - (net.lastSeen || Date.now()) > 16000) linkLost();
+  }, 4000);
+
   /** What the guest's seat is allowed to see: other hands, the stock and the shuffle stay hidden until the hand is over. */
   function viewFor(seat) {
     const v = JSON.parse(JSON.stringify(g)), over = g.phase === 'over';
@@ -2376,7 +2454,7 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
   }
   function sendState() {
     const move = lastMove; lastMove = null;
-    if (!net || net.role !== 'host' || !net.conn || !net.conn.open) return;
+    if (!net || net.role !== 'host' || !net.link) return;
     const seat = net.friendSeat;
     const m = move && move.kind === 'draw' && move.src === 'stock' && !move.shown && move.seat !== seat ? Object.assign({}, move, { id: null }) : move;
     send({ t: 'state', view: viewFor(seat), move: m });
@@ -2395,48 +2473,92 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
     newGame([0, seat]);
     deal();
   }
+
+  // --- hosting ---
   async function hostOnline() {
     myNameInput(); save();
     const seat = +(($('#friend-seat') || {}).value || 2);
     friendUi.error = '';
-    try { await loadPeerJs(); } catch (e) { friendUi.error = 'Could not load the online connection. ' + WEB_NOTE; renderModal(true); return; }
-    openHost(seat, 0);
-  }
-  function openHost(seat, tries) {
-    const code = makeCode(), peer = new window.Peer('cuajo-' + code);
-    net = { role: 'host', peer, conn: null, code, friendSeat: seat, ready: false };
+    const mine = net = { role: 'host', code: makeCode(), friendSeat: seat, ready: false, link: null, away: false, started: false, peer: null, relay: null, friendPid: null };
     renderModal(true);
-    peer.on('open', () => { if (net && net.peer === peer) { net.ready = true; renderModal(true); } });
-    peer.on('connection', conn => {
-      if (!net || net.peer !== peer) return;
-      if (net.conn) { conn.on('open', () => { conn.send({ t: 'full' }); setTimeout(() => conn.close(), 500); }); return; }
-      net.conn = conn;
-      conn.on('data', onHostData);
-      conn.on('close', onFriendLeft);
-    });
-    peer.on('error', e => {
-      if (!net || net.peer !== peer) return;
-      if (e.type === 'unavailable-id' && tries < 3) { peer.destroy(); openHost(seat, tries + 1); return; }
-      if (net.conn && mode === 'host') { console.warn(e); return; }   // the game connection itself is still fine
-      friendUi.error = describePeerError(e); net = null; try { peer.destroy(); } catch (x) { /* ignore */ }
-      renderModal(true);
-    });
+    if (!FORCE_RELAY) await startHostPeer(mine);          // settles the code (it must be free on the direct route)
+    if (net !== mine) return;
+    try {
+      const r = await openRelay(mine.code, 'host');
+      if (net !== mine) { r.close(); return; }
+      mine.relay = r;
+      r.onMessage((m, from) => hostIncoming(m, { kind: 'relay', from }));
+    } catch (e) { console.warn('relay route unavailable', e); }
+    if (net !== mine) return;
+    if (!mine.peer && !mine.relay) { friendUi.error = 'Could not reach the connection services. Check the internet connection and try again. ' + WEB_NOTE; closeNet(mine); net = null; }
+    else mine.ready = true;
+    renderModal(true);
   }
-  function onHostData(msg) {
+  async function startHostPeer(mine) {
+    try { await loadScript(PEERJS_URL, 'Peer'); } catch (e) { return; }
+    for (let tries = 0; tries < 3 && net === mine; tries++) {
+      const ok = await new Promise(res => {
+        const peer = new window.Peer('cuajo-' + mine.code, { config: ICE });
+        let settled = false;
+        const done = v => { if (!settled) { settled = true; res(v); } };
+        peer.on('open', () => { mine.peer = peer; done('ok'); });
+        peer.on('connection', conn => conn.on('open', () => {
+          if (net !== mine) { try { conn.close(); } catch (e) { /* ignore */ } return; }
+          const l = directLink(conn);
+          l.onMessage(m => hostIncoming(m, { kind: 'direct', link: l }));
+          l.onClose(() => { if (net === mine && mine.link && mine.link.direct === l) linkLost(); });
+        }));
+        peer.on('error', e => {
+          if (e.type === 'unavailable-id') { try { peer.destroy(); } catch (x) { /* ignore */ } done('taken'); return; }
+          if (!settled) { try { peer.destroy(); } catch (x) { /* ignore */ } done('failed'); }
+          else console.warn('direct route', e.type);
+        });
+        setTimeout(() => { if (!settled) { try { peer.destroy(); } catch (x) { /* ignore */ } done('failed'); } }, 7000);
+      });
+      if (ok === 'taken') { mine.code = makeCode(); continue; }
+      return;
+    }
+  }
+  function hostIncoming(msg, via) {
     if (!msg || !net || net.role !== 'host') return;
-    const seat = net.friendSeat;
+    const mine = net, seat = mine.friendSeat;
+    const current = mine.link && (via.kind === 'relay' ? mine.link.kind === 'relay' && mine.link.from === via.from : mine.link.direct === via.link);
     if (msg.t === 'hello') {
+      if (current && mine.started && !mine.away) { mine.link.send({ t: 'welcome', seat, v: 2, rejoin: true }); sendState(); return; }   // a repeated hello
+      const samePerson = mine.friendPid && msg.pid === mine.friendPid;
+      if (mine.link && !current && !samePerson && !mine.away) {
+        if (via.kind === 'relay') mine.relay.send({ t: 'full', to: via.from }); else via.link.send({ t: 'full' });
+        return;
+      }
+      if (mine.link && mine.link.direct && mine.link.direct !== via.link) mine.link.direct.close();
+      mine.link = via.kind === 'relay'
+        ? { kind: 'relay', from: via.from, send: m => mine.relay && mine.relay.send(Object.assign({ to: via.from }, m)) }
+        : { kind: 'direct', direct: via.link, send: m => via.link.send(m) };
+      mine.lastSeen = Date.now();
+      const nm0 = String(msg.name || '').trim().slice(0, 14), nm = nm0 && nm0 !== 'You' ? nm0 : 'Friend';
+      humanNames = {}; humanNames[seat] = nm;
+      if (mine.started && (samePerson || mine.away)) {       // coming back to the game in progress
+        mine.friendPid = msg.pid || mine.friendPid; mine.away = false;
+        mode = 'host'; g.humans = [0, seat]; applyNames(); C.setDifficulty(g, settings.difficulty);
+        mine.link.send({ t: 'welcome', seat, v: 2, rejoin: true });
+        flash(nm + ' is back in the game.');
+        changed();
+        return;
+      }
+      mine.friendPid = msg.pid || null; mine.started = true;
       mode = 'host'; if (ME !== 0) switchMe(0);
-      const nm = String(msg.name || '').trim().slice(0, 14);
-      humanNames = {}; humanNames[seat] = nm && nm !== 'You' ? nm : 'Friend';
-      send({ t: 'welcome', seat, v: 1 });
+      mine.link.send({ t: 'welcome', seat, v: 2 });
       modal = null;
       newGame([0, seat]);             // a fresh scoreboard for the two of you
       deal();
-      flash(humanNames[seat] + ' joined the game.');
+      flash(nm + ' joined the game.');
       return;
     }
-    if (msg.t === 'bye') { onFriendLeft(); return; }
+    if (!current) return;
+    mine.lastSeen = Date.now();
+    if (msg.t === 'ping') { mine.link.send({ t: 'pong' }); return; }
+    if (msg.t === 'pong') return;
+    if (msg.t === 'bye') { friendGone(true); return; }
     if (mode !== 'host') return;
     if (msg.t === 'skip') { skipAhead(); return; }
     if (msg.t !== 'act') return;
@@ -2452,14 +2574,21 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
       const r = act(seat, a, arg); announce(r.b); drive();
     } catch (e) { console.error(e); sendState(); }
   }
-  function onFriendLeft() {
+  /** The friend left on purpose (bye) or the connection dropped. A computer player fills the seat; they can rejoin with the same code. */
+  function friendGone(onPurpose) {
     if (!net || net.role !== 'host') return;
-    const seat = net.friendSeat, nm = humanNames[seat] || 'Your friend', wasPlaying = mode === 'host';
-    try { net.peer.destroy(); } catch (e) { /* ignore */ }
-    net = null; mode = 'solo'; humanNames = {};
+    const mine = net, seat = mine.friendSeat, nm = humanNames[seat] || 'Your friend', wasPlaying = mode === 'host';
+    if (mine.link && mine.link.direct) mine.link.direct.close();
+    mine.link = null;
+    if (!wasPlaying) { renderModal(true); return; }
+    mine.away = true; mode = 'solo';
     if (g) { g.humans = [0]; applyNames(); C.setDifficulty(g, settings.difficulty); }
-    if (wasPlaying) { flash(nm + ' left. A computer player takes over that seat.'); changed(); } else renderModal(true);
+    flash(onPurpose ? nm + ' left. A computer player takes that seat; they can rejoin with code ' + mine.code + '.'
+      : nm + ' lost the connection. A computer player fills in until they rejoin.');
+    changed();
   }
+
+  // --- joining ---
   async function joinOnline() {
     myNameInput();
     const code = ((($('#join-code') || {}).value || '').toUpperCase().replace(/[^A-Z0-9]/g, ''));
@@ -2467,35 +2596,75 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
     if (code.length < 4) { friendUi.error = 'Type the game code your friend sent you.'; renderModal(true); return; }
     save();                          // keep your own game; it comes back when you leave
     friendUi.error = '';
-    try { await loadPeerJs(); } catch (e) { friendUi.error = 'Could not load the online connection. ' + WEB_NOTE; renderModal(true); return; }
-    const peer = new window.Peer();
-    net = { role: 'guest', peer, conn: null, code, connected: false };
+    const mine = net = { role: 'guest', code, connected: false, link: null, peer: null, relay: null, reconnecting: false };
     renderModal(true);
-    peer.on('open', () => {
-      if (!net || net.peer !== peer) return;
-      const conn = peer.connect('cuajo-' + code, { reliable: true });
-      net.conn = conn;
-      conn.on('open', () => conn.send({ t: 'hello', name: settings.names[0], v: 1 }));
-      conn.on('data', onGuestData);
-      conn.on('close', onHostLeft);
-    });
-    peer.on('error', e => {
-      if (!net || net.peer !== peer) return;
-      if (net.connected && mode === 'guest' && e.type !== 'peer-unavailable') { console.warn(e); return; }
-      friendUi.error = describePeerError(e); net = null; try { peer.destroy(); } catch (x) { /* ignore */ }
-      if (mode === 'guest') restoreSolo(); else renderModal(true);
-    });
+    const ok = await connectGuest(mine);
+    if (net === mine && !ok) { friendUi.error = 'No game found with code ' + code + '. Check the code with your friend, and make sure their game is still open.'; closeNet(mine); net = null; renderModal(true); }
   }
-  function onGuestData(msg) {
+  /** Tries the direct route first, then the relay. Resolves true once the host has welcomed us. */
+  async function connectGuest(mine) {
+    if (!FORCE_RELAY && await guestDirect(mine, 6000)) return true;
+    if (net !== mine) return false;
+    return guestRelay(mine, 10000);
+  }
+  function waitWelcome(mine, ms) {
+    return new Promise(res => { const t0 = Date.now(); (function w() { if (net !== mine) res(false); else if (mine.welcomed) res(true); else if (mine.routeFailed || Date.now() - t0 > ms) res(false); else setTimeout(w, 100); })(); });
+  }
+  async function guestDirect(mine, ms) {
+    try { await loadScript(PEERJS_URL, 'Peer'); } catch (e) { return false; }
+    mine.welcomed = false; mine.routeFailed = false;
+    const peer = new window.Peer({ config: ICE });
+    mine.peer = peer;
+    peer.on('open', () => {
+      if (net !== mine) return;
+      const conn = peer.connect('cuajo-' + mine.code, { reliable: true });
+      conn.on('open', () => {
+        if (net !== mine) { try { conn.close(); } catch (e) { /* ignore */ } return; }
+        const l = directLink(conn);
+        l.onMessage(m => { if (net === mine) { mine.link = mine.link || { kind: 'direct', direct: l, send: x => l.send(x) }; guestIncoming(m); } });
+        l.onClose(() => { if (net === mine && mine.link && mine.link.direct === l) linkLost(); });
+        mine.link = { kind: 'direct', direct: l, send: x => l.send(x) };
+        l.send({ t: 'hello', name: settings.names[0], pid: PID, v: 2 });
+      });
+    });
+    peer.on('error', e => { if (!mine.welcomed && (e.type === 'peer-unavailable' || e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error')) mine.routeFailed = true; });
+    const ok = await waitWelcome(mine, ms);
+    if (!ok) { if (mine.link && mine.link.direct) mine.link.direct.close(); mine.link = null; try { peer.destroy(); } catch (e) { /* ignore */ } if (mine.peer === peer) mine.peer = null; }
+    return ok;
+  }
+  async function guestRelay(mine, ms) {
+    let r;
+    try { r = await openRelay(mine.code, 'guest'); } catch (e) { return false; }
+    if (net !== mine) { r.close(); return false; }
+    mine.relay = r; mine.welcomed = false; mine.routeFailed = false;
+    mine.link = { kind: 'relay', send: x => r.send(x) };
+    r.onMessage(m => { if (net === mine && (!m.to || m.to === r.me)) guestIncoming(m); });
+    const hello = () => r.send({ t: 'hello', name: settings.names[0], pid: PID, v: 2 });
+    hello();
+    const again = setInterval(() => { if (net !== mine || mine.welcomed || r.closed) clearInterval(again); else hello(); }, 2000);   // in case we reached different relay servers first
+    const ok = await waitWelcome(mine, ms);
+    clearInterval(again);
+    if (!ok) { r.close(); if (mine.relay === r) mine.relay = null; mine.link = null; }
+    return ok;
+  }
+  function guestIncoming(msg) {
     if (!msg || !net || net.role !== 'guest') return;
+    const mine = net;
+    mine.lastSeen = Date.now();
+    if (msg.t === 'ping') { send({ t: 'pong' }); return; }
+    if (msg.t === 'pong') return;
     if (msg.t === 'welcome') {
-      mode = 'guest'; ME = msg.seat; net.connected = true;
-      selIds = []; groupOf = {}; handOrder = []; orderHand = 0; pickExtra = null; bubbles = {}; resultShown = false; modal = null;
-      dealToken++; dealing = false; handHidden = false; promptSeat = null;
+      if (mine.welcomed) return;                 // a repeat of the same welcome
+      const back = mode === 'guest';             // we were already in this game: reconnecting
+      mine.welcomed = true; mine.connected = true;
+      mode = 'guest'; ME = msg.seat;
+      if (!back) { selIds = []; groupOf = {}; handOrder = []; orderHand = 0; pickExtra = null; bubbles = {}; resultShown = false; dealToken++; dealing = false; handHidden = false; promptSeat = null; }
+      if (modal === 'friend') modal = null;
+      if (back) flash('Reconnected.');
       render(); return;
     }
-    if (msg.t === 'full') { friendUi.error = 'That game already has two players.'; try { net.peer.destroy(); } catch (e) { /* ignore */ } net = null; renderModal(true); return; }
-    if (msg.t === 'bye') { onHostLeft(); return; }
+    if (msg.t === 'full') { mine.welcomed = false; friendUi.error = 'That game already has two players.'; closeNet(mine); net = null; renderModal(true); return; }
+    if (msg.t === 'bye') { hostGone(true); return; }
     if (mode !== 'guest') return;
     if (msg.t === 'bubble') { showBubble(msg.seat, msg.text, msg.msec); return; }
     if (msg.t === 'state' && msg.view) applyRemote(msg.view, msg.move);
@@ -2515,12 +2684,33 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
     animateMove(move, from);
     drive();
   }
-  function onHostLeft() {
+  /** Lost contact with the other computer (connection closed or silent for 16 s). */
+  function linkLost() {
+    if (!net || !net.link) return;
+    if (net.role === 'host') { friendGone(false); return; }
+    const mine = net;
+    if (mine.link.direct) mine.link.direct.close();
+    if (mine.relay) { mine.relay.close(); mine.relay = null; }
+    mine.link = null;
+    if (mode !== 'guest') { renderModal(true); return; }
+    reconnect(mine);
+  }
+  /** The guest keeps trying for a minute; meanwhile the game stays on screen. */
+  async function reconnect(mine) {
+    if (mine.reconnecting) return;
+    mine.reconnecting = true; render();
+    const until = Date.now() + 60000;
+    while (net === mine && Date.now() < until) {
+      if (await connectGuest(mine)) { mine.reconnecting = false; render(); return; }
+      await wait(2000);
+    }
+    if (net === mine) hostGone(false);
+  }
+  function hostGone(onPurpose) {
     if (!net || net.role !== 'guest') return;
-    const wasPlaying = mode === 'guest';
-    try { net.peer.destroy(); } catch (e) { /* ignore */ }
-    net = null;
-    if (wasPlaying) { restoreSolo(); flash('The connection to the host ended. You are back in your own game.'); }
+    const wasPlaying = mode === 'guest', hostName = name(0);
+    closeNet(net); net = null;
+    if (wasPlaying) { restoreSolo(); flash(onPurpose ? hostName + ' ended the online game. You are back in your own game.' : 'Could not reconnect to ' + hostName + '. You are back in your own game.'); }
     else renderModal(true);
   }
   function restoreSolo() {
@@ -2535,8 +2725,8 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
   }
   /** Back to one player against three computer players. */
   function stopFriend() {
-    const wasGuest = mode === 'guest';
-    if (net) { send({ t: 'bye' }); const p = net.peer; setTimeout(() => { try { p.destroy(); } catch (e) { /* ignore */ } }, 300); }
+    const wasGuest = mode === 'guest' || (net && net.role === 'guest'), n = net;
+    if (n) { send({ t: 'bye' }); setTimeout(() => closeNet(n), 400); }
     net = null;
     if (wasGuest) { restoreSolo(); modal = null; render(); return; }
     mode = 'solo'; humanNames = {}; handHidden = false; promptSeat = null;
@@ -2544,9 +2734,12 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
     layouts = {}; modal = null; changed();
   }
   function cancelOnline() {
-    if (net) { const p = net.peer; net = null; try { p.destroy(); } catch (e) { /* ignore */ } }
-    friendUi.error = ''; renderModal(true);
+    const n = net; net = null; closeNet(n);
+    if (mode === 'guest') restoreSolo();
+    renderModal(true);
   }
+  function routeLabel() { return !net || !net.link ? '' : net.link.kind === 'direct' ? 'Connected directly.' : 'Connected through relay servers (' + (net.relay ? net.relay.servers() : 0) + ' of ' + RELAYS.length + ' reachable).'; }
+
   function modeLabel() {
     const friend = Object.keys(humanNames).map(k => humanNames[k])[0] || (mode === 'guest' ? name(0) : 'your friend');
     if (mode === 'local') return 'Pass-and-play with ' + friend;
@@ -2562,11 +2755,12 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
         : mode === 'host' ? humanNames[Object.keys(humanNames)[0]] + ' is playing online as your ' + (isHuman(2) ? 'partner.' : 'opponent.')
         : 'You are sharing this computer with ' + humanNames[Object.keys(humanNames)[0]] + '.';
       box.append(el('p', null, who));
+      if (mode !== 'local' && routeLabel()) box.append(el('p', 'route', routeLabel()));
       box.append(barWith(btn('Back to playing alone', stopFriend, 'danger'), btn('Close', closeModal, 'primary')));
       return box;
     }
     if (net && net.role === 'host') {
-      box.append(el('p', null, 'Send your friend this code or link. The game starts as soon as they join.'));
+      box.append(el('p', null, net.away ? (humanNames[net.friendSeat] || 'Your friend') + ' is not connected right now. They can rejoin with this code or link, and a computer player fills in until then.' : 'Send your friend this code or link. The game starts as soon as they join. It works across different networks.'));
       const code = el('div', 'join-code', net.ready ? net.code : '…'); box.append(code);
       if (net.ready) {
         const link = el('input'); link.type = 'text'; link.readOnly = true; link.id = 'join-link'; link.value = joinLink(net.code);
@@ -2576,15 +2770,15 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
         });
         const row = el('div', 'link-row'); row.append(link, copy); box.append(row);
       }
-      const st = el('p', 'wait'); st.append(net.ready ? 'Waiting for your friend to join' : 'Setting up the game', el('span', 'thinking'));
+      const st = el('p', 'wait'); st.append(net.ready ? (net.away ? 'Waiting for them to rejoin' : 'Waiting for your friend to join') : 'Setting up the game', el('span', 'thinking'));
       st.lastChild.append(el('i'), el('i'), el('i'));
       box.append(st);
       if (friendUi.error) box.append(el('p', 'error', friendUi.error));
-      box.append(barWith(btn('Cancel', cancelOnline)));
+      box.append(barWith(btn(net.away ? 'Stop waiting' : 'Cancel', cancelOnline)));
       return box;
     }
     if (net && net.role === 'guest') {
-      const st = el('p', 'wait'); st.append('Connecting to game ' + net.code, el('span', 'thinking')); st.lastChild.append(el('i'), el('i'), el('i'));
+      const st = el('p', 'wait'); st.append('Connecting to game ' + net.code + ' (this can take up to 15 seconds on some networks)', el('span', 'thinking')); st.lastChild.append(el('i'), el('i'), el('i'));
       box.append(st, barWith(btn('Cancel', cancelOnline)));
       return box;
     }
@@ -2672,7 +2866,8 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
     select: id => onCard(id), group: groupSelected, groups: () => Object.assign({}, groupOf), order: () => handOrder.slice(), isDealing: () => dealing,
     setSpeed: v => { settings.speed = v; save(); },
     closeModal, cardEl, skipAhead, waitingOnOthers,
-    mode: () => mode, me: () => ME, net: () => net && { role: net.role, code: net.code, ready: net.ready, connected: net.connected, open: !!(net.conn && net.conn.open) },
+    mode: () => mode, me: () => ME, net: () => net && { role: net.role, code: net.code, ready: net.ready, connected: net.connected, route: net.link ? net.link.kind : null, away: !!net.away, reconnecting: !!net.reconnecting, relayServers: net.relay ? net.relay.servers() : 0, direct: !!net.peer },
+    dropLink: () => { const n = net; if (!n) return; if (n.link && n.link.direct) n.link.direct.close(); if (n.relay) { n.relay.close(); n.relay = null; } if (n.peer) { try { n.peer.destroy(); } catch (e) { /* ignore */ } n.peer = null; } n.link = null; if (n.role === 'guest') reconnect(n); },
     startLocal: (friend, seat) => { modal = 'friend'; renderModal(true); $('#friend-name').value = friend || 'Friend'; $('#friend-seat').value = String(seat || 2); startLocal(); },
     reveal: seat => reveal(seat), covered: () => covered(), promptSeat: () => promptSeat, stopFriend,
   };

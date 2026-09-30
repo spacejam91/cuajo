@@ -13,8 +13,13 @@ against two computer opponents (East, West). Rules follow https://www.pagat.com/
 
 - **On this computer:** pass-and-play. Cards are hidden between turns and the game asks you to pass the computer.
 - **Online:** one person presses Play with a friend, then Start an online game, and sends the code or link.
-  The other opens the link (or types the code) and joins. The browsers connect directly (PeerJS); the host's
-  copy runs the game and sends the guest only what their seat may see.
+  The other opens the link (or types the code) and joins. The host's copy runs the game and sends the guest
+  only what their seat may see.
+- **Different networks:** the browsers first try a direct connection (PeerJS/WebRTC). If that cannot be made
+  within a few seconds (phone hotspots, strict routers), the game switches to an encrypted relay through three
+  public MQTT servers at once (EMQX, HiveMQ, Eclipse Mosquitto), so it works between any two internet
+  connections that can reach them. A heartbeat notices dropped connections; the guest reconnects on its own
+  and a computer player fills in until they are back. Add `?relay=1` to the address to test the relay route.
 
 ## Updating the website
 
