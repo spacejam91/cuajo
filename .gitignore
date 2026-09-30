@@ -1,0 +1,6 @@
+# build output for the Claude artifact and local testing (docs/ holds the published site)
+dist/
+# local tool settings
+.claude/
+.DS_Store
+node_modules/
