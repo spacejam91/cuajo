@@ -21,6 +21,14 @@ against two computer opponents (East, West). Rules follow https://www.pagat.com/
   connections that can reach them. A heartbeat notices dropped connections; the guest reconnects on its own
   and a computer player fills in until they are back. Add `?relay=1` to the address to test the relay route.
 
+## More
+
+- **Up to four people online:** up to three friends can join one game (even mid-game); each takes over a computer player's seat.
+- **Chat:** quick messages and one-tap phrases that pop up as speech bubbles over the sender's seat.
+- **Matches and stats:** play 8 or 16 hands, or first to a money target; stats (hands won, streaks, biggest payout) are kept on each device.
+- **Install as an app:** on the website, use Install app (Chrome, Edge, Android) or Share, then Add to Home Screen (iPhone, iPad). Solo play works offline.
+- **Taglish:** Settings, then Language. Card names switch to the Spanish names used at Filipino tables (Cuatro de Oros); the wording could use a native speaker's review.
+
 ## Updating the website
 
 1. Change files in `src/`, then run `node build.js` (this refreshes `docs/index.html`).
@@ -31,7 +39,8 @@ against two computer opponents (East, West). Rules follow https://www.pagat.com/
 - `src/engine.js` — rules, hand evaluation (partition / distance planner), scoring and AI. No DOM; also loads in Node.
 - `src/app.js` — table UI and controller (rendering, modals, persistence, hot-reload snapshot).
 - `src/style.css`, `src/template.html` — page and card styling; suit icons are inline SVG symbols.
-- `build.js` — bundles everything into `docs/index.html` (the website), `dist/index.html` (standalone) and `dist/page.html` (Claude artifact).
+- `build.js` — bundles everything into `docs/` (the website, with the app manifest, service worker and icons), `dist/index.html` (standalone) and `dist/page.html` (Claude artifact).
+- `tools_icon.py` — draws the app icons into `src/assets/` without any image libraries.
 - `test/engine.test.js` — brute-force cross-checks of the combination logic plus simulated AI-only games.
 
 ```bash

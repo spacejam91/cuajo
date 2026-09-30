@@ -292,3 +292,28 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
 .settings h3 { margin-top: 20px; }
 .fixed-name { color: var(--fg-dim); }
 .friend .route { color: var(--fg-dim); font-size: 14px; }
+
+/* chat */
+.chat { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: min(340px, calc(100vw - 32px)); max-height: min(62vh, 440px); display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5); z-index: 40; }
+.chat-head { display: flex; justify-content: space-between; align-items: center; font: 700 17px/1 var(--font-display); color: var(--accent); letter-spacing: 0.04em; }
+.chat-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1 1 auto; min-height: 60px; display: flex; flex-direction: column; gap: 5px; font-size: 14px; overflow-wrap: anywhere; }
+.chat-list b { color: var(--accent); }
+.chat-list .empty { color: var(--fg-dim); }
+.chat-quick { display: flex; flex-wrap: wrap; gap: 4px; }
+.chat-form { display: flex; gap: 6px; }
+.chat-form input { flex: 1 1 auto; min-width: 0; font: inherit; padding: 7px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); }
+
+/* matches, seats and stats */
+.sc.match { background: rgba(226, 176, 79, 0.18); color: var(--accent); font-weight: 700; }
+.match-win { font: 700 20px/1.2 var(--font-display); color: var(--accent); }
+.friend .seats .row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.friend .seats .row:first-child { border-top: 0; }
+.who.here { color: var(--good); font-weight: 700; }
+.who.away { color: var(--warn); }
+.who.open { color: var(--fg-dim); }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 8px 0; }
+.stat { background: rgba(0, 0, 0, 0.22); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.stat b { font: 700 22px/1.1 var(--font-display); color: var(--accent); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--fg-dim); }
+.note { color: var(--fg-dim); font-size: 13px; }
+@media (max-width: 600px) { .chat { right: 8px; left: 8px; width: auto; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); } }
