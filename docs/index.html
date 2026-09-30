@@ -426,6 +426,21 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
   .hand { --cw: calc(46px * var(--size)); }
 }
 
+/* sort tabs: one bar, the current choice filled in */
+.sort-tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); }
+.sort-tab { border: 0; background: transparent; color: var(--fg-dim); font: 600 14px/1.2 var(--font-body); padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.sort-tab:hover { color: var(--fg); background: rgba(255, 255, 255, 0.06); }
+.sort-tab.on { background: var(--accent); color: var(--accent-ink); }
+.sort-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.link { background: transparent; border-color: transparent; color: var(--fg-dim); font-weight: 600; font-size: 14px; padding: 6px 8px; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, 0.25); }
+.btn.link:hover { color: var(--fg); background: transparent; }
+@media (max-width: 600px) {
+  .sort-lbl { display: none; }
+  .sort-tab { min-height: 38px; padding: 8px 14px; font-size: 14.5px; }
+  .btn.link { min-height: 38px; }
+}
+@media (max-height: 500px) and (orientation: landscape) { .sort-tab { min-height: 34px; } }
+
 </style>
 </head>
 <body>
@@ -2280,41 +2295,28 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
     render();
   }
 
-  // One "Sort" button that opens a short menu; choosing an item always re-sorts, even if it is the current one.
+  // Sorting: three tabs in one bar; the current one is filled in. Tapping a tab always re-sorts.
   const SORTS = [['suit', 'Suit', 'Loose cards by suit, then rank'], ['rank', 'Rank', 'Loose cards by rank, then suit'], ['combos', 'Auto-group', 'Finished combinations first, then cards one short']];
-  let sortMenuOpen = false;
-  function sortDropdown() {
-    const wrap = el('div', 'sort-dd');
-    const cur = SORTS.find(x => x[0] === settings.sortMode) || SORTS[0];
-    const b = el('button', 'btn chip sort-btn'); b.type = 'button'; b.dataset.key = 'sort-btn';
-    b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', sortMenuOpen ? 'true' : 'false');
-    b.append(el('span', 'sort-lbl', 'Sort'), el('span', 'sort-cur', cur[1]), el('span', 'caret', '\u25BE'));
-    b.addEventListener('click', e => { e.stopPropagation(); sortMenuOpen = !sortMenuOpen; render(); if (sortMenuOpen) { const f = $('.sort-menu [role=menuitemradio]'); if (f) f.focus(); } });
-    wrap.append(b);
-    if (sortMenuOpen) {
-      const menu = el('div', 'sort-menu'); menu.setAttribute('role', 'menu');
-      for (const [m, label, tip] of SORTS) {
-        const it = el('button', 'sort-item' + (settings.sortMode === m ? ' on' : '')); it.type = 'button';
-        it.setAttribute('role', 'menuitemradio'); it.setAttribute('aria-checked', settings.sortMode === m ? 'true' : 'false'); it.dataset.key = 'sort-' + m;
-        it.append(el('b', null, label), el('small', null, tip));
-        it.addEventListener('click', e => { e.stopPropagation(); sortMenuOpen = false; sortHand(m); });
-        menu.append(it);
-      }
-      wrap.append(menu);
+  function sortTabs() {
+    const bar = el('div', 'sort-tabs'); bar.setAttribute('role', 'tablist'); bar.setAttribute('aria-label', L('Sort'));
+    for (const [m, label, tip] of SORTS) {
+      const on = settings.sortMode === m;
+      const t = el('button', 'sort-tab' + (on ? ' on' : ''), label); t.type = 'button';
+      t.setAttribute('role', 'tab'); t.setAttribute('aria-selected', on ? 'true' : 'false'); t.title = L(tip); t.dataset.key = 'sort-' + m;
+      t.addEventListener('click', () => sortHand(m));
+      bar.append(t);
     }
-    return wrap;
+    return bar;
   }
-  document.addEventListener('click', e => { if (sortMenuOpen && !(e.target.closest && e.target.closest('.sort-dd'))) { sortMenuOpen = false; render(); } });
-  document.addEventListener('keydown', e => { if (sortMenuOpen && e.key === 'Escape') { sortMenuOpen = false; render(); const b = $('.sort-btn'); if (b) b.focus(); } });
 
   function renderHandTools() {
     const tools = $('#hand-tools'); tools.innerHTML = '';
     if (g.phase === 'idle' || dealing || !g.hands[ME].length) return;
-    tools.append(sortDropdown());
+    tools.append(el('span', 'lbl sort-lbl', 'Sort'), sortTabs());
     if (selIds.length >= 2) { const b = btn('Group ' + selIds.length + ' cards', groupSelected, 'chip primary'); b.dataset.key = 'group-sel'; tools.append(b); }
-    if (selIds.some(id => groupOf[id] != null)) { const b = btn('Take out of group', ungroupSelected, 'chip'); b.dataset.key = 'ungroup-sel'; tools.append(b); }
-    if (Object.keys(groupOf).length && !selIds.length) { const b = btn('Ungroup all', ungroupAll, 'chip'); b.dataset.key = 'ungroup-all'; tools.append(b); }
-    if (selIds.length) { const b = btn('Clear selection', () => { selIds = []; render(); }, 'chip'); b.dataset.key = 'clear-sel'; tools.append(b); }
+    if (selIds.some(id => groupOf[id] != null)) { const b = btn('Take out of group', ungroupSelected, 'link'); b.dataset.key = 'ungroup-sel'; tools.append(b); }
+    if (Object.keys(groupOf).length && !selIds.length) { const b = btn('Ungroup all', ungroupAll, 'link'); b.dataset.key = 'ungroup-all'; tools.append(b); }
+    if (selIds.length) { const b = btn('Clear selection', () => { selIds = []; render(); }, 'link'); b.dataset.key = 'clear-sel'; tools.append(b); }
     const tip = selIds.length === 1 ? 'Click more cards to group them.' : selIds.length ? '' : (COARSE ? 'Tap cards to select them. Press and hold to drag.' : 'Click cards to select them. Drag to move them.');
     const drop = myTurn('discard') ? ' Drop a card on the discard pile to discard it.' : '';
     if (tip || drop) tools.append(el('span', 'drag-hint', (tip + drop).trim()));
