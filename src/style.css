@@ -150,7 +150,7 @@ body.dragging .hand .card:hover { transform: none; }
 .card.s-swords { --suit: var(--espadas); }
 .card.s-batons { --suit: var(--bastos); }
 .card .face { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.face .ix { font-family: var(--font-display); font-weight: 700; font-size: 21px; fill: #2a2118; }
+.face .ix { font-family: var(--font-display); font-weight: 700; font-size: 24px; fill: #2a2118; }
 .face .ix.big { font-size: 46px; }
 .face .tiny { font-family: var(--font-display); font-weight: 700; font-size: 6.5px; letter-spacing: 1.2px; fill: #2a2118; }
 .card.back { background: repeating-linear-gradient(45deg, #8a2a2e 0 4px, #6d1c20 4px 8px), #6d1c20; border: calc(var(--cw) * 0.07) solid var(--ivory); }
@@ -317,3 +317,93 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
 .stat span { font-size: 13px; color: var(--fg-dim); }
 .note { color: var(--fg-dim); font-size: 13px; }
 @media (max-width: 600px) { .chat { right: 8px; left: 8px; width: auto; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); } }
+
+/* phones: readable text and finger-sized controls */
+@media (max-width: 600px) {
+  .sc { font-size: 13px; padding: 3px 8px; }
+  .topbar .btn { min-height: 38px; padding: 6px 11px; font-size: 14px; }
+  .seat header { font-size: 13px; }
+  .seat .nm { font-size: 15px; }
+  .tag { font-size: 11.5px; padding: 2px 5px; }
+  .pile .lbl { font-size: 12px; }
+  .pile .cnt { font-size: 13px; }
+  .status { font-size: 15px; }
+  .log { font-size: 13px; }
+  .you header { font-size: 14px; }
+  .btn.chip { min-height: 36px; padding: 6px 12px; font-size: 14px; }
+  .hint { font-size: 13.5px; }
+  .bar .btn { min-height: 44px; padding: 9px 14px; font-size: 15px; }
+  .btn.next { min-height: 40px; padding: 7px 14px; font-size: 14px; }
+  .grp-tag { font-size: 12px; }
+  .grp-x { font-size: 20px; padding: 2px 7px; }
+  .modal { padding: 10px; }
+  .modal .box { padding: 16px 14px 14px; font-size: 15px; max-height: calc(100% - 4px); }
+  .modal .box > .bar .btn, .friend .link-row .btn { min-height: 44px; }
+  /* 16px text in form fields stops iPhones from zooming in when you tap them */
+  .settings select, .settings input[type=text], .link-row input, .chat-form input { font-size: 16px; min-height: 42px; width: 100%; }
+  .settings .row { gap: 6px 12px; }
+  .settings .row > span:first-child { flex: 1 1 100%; }
+  .settings input[type=checkbox] { width: 24px; height: 24px; }
+  .chat-quick .btn.chip { min-height: 38px; }
+  .stat b { font-size: 20px; }
+}
+/* phones held sideways: keep the table on one screen */
+@media (max-height: 500px) and (orientation: landscape) {
+  :root { --cw: calc(40px * var(--size)); }
+  #app { gap: 4px; padding-block: 4px; }
+  .table { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "west north east" "center center center"; gap: 4px; }
+  .seat { padding: 2px; gap: 2px; }
+  .seat .fan { display: none; }
+  .log { display: none; }
+  .center { gap: 4px; padding: 0; }
+  .hand { --cw: calc(44px * var(--size)); padding-top: 10px; gap: 10px 8px; min-height: 0; }
+  .brand .sub { display: none; }
+}
+@media (max-width: 600px) {
+  .scores { gap: 4px; }
+  .sc { font-size: 12.5px; padding: 2px 7px; gap: 4px; }
+  .dot { width: 6px; height: 6px; }
+  .log li:nth-child(n+2) { display: none; }
+  .hand { --cw: calc(min(12.8vw, 52px) * var(--size)); gap: 10px 6px; }
+  .seg { row-gap: 10px; }
+  .seg.grp { padding: 26px 4px 4px calc(var(--cw) * 0.36 + 4px); }
+  .grp-tag { top: 1px; left: 6px; right: 0; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+  .grp-x { min-width: 32px; min-height: 26px; font-size: 20px; line-height: 1; padding: 0; }
+  .hand-tools { gap: 4px; }
+}
+
+/* sort dropdown */
+.sort-dd { position: relative; }
+.sort-btn { display: inline-flex; align-items: center; gap: 6px; }
+.sort-btn .sort-lbl { color: var(--fg-dim); font-weight: 600; }
+.sort-btn .caret { font-size: 11px; opacity: 0.8; }
+.sort-menu { position: absolute; left: 0; top: calc(100% + 6px); z-index: 25; min-width: 230px; display: flex; flex-direction: column; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45); }
+.sort-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--fg); font: inherit; cursor: pointer; }
+.sort-item b { font-size: 15px; }
+.sort-item small { font-size: 12.5px; color: var(--fg-dim); }
+.sort-item:hover, .sort-item:focus-visible { background: var(--panel-2); outline: none; }
+.sort-item.on b { color: var(--accent); }
+.sort-item.on b::after { content: '  \2713'; }
+@media (max-width: 600px) {
+  .btn.next kbd { display: none; }
+  .secret span, .marker span { font-size: 12px; }
+  .seg.grp { min-width: 116px; }
+  .sort-item { min-height: 48px; }
+}
+@media (pointer: coarse) { .btn.next kbd { display: none; } }
+.chat-head .btn { font: 600 14px/1.2 var(--font-body); letter-spacing: 0; }
+/* phones held sideways: same readable sizes as upright */
+@media (max-height: 500px) and (orientation: landscape) {
+  .tag { font-size: 11.5px; }
+  .pile .lbl { font-size: 12px; }
+  .sc { font-size: 13px; }
+  .seat header { font-size: 13px; }
+  .seat .nm { font-size: 15px; }
+  .btn.chip { min-height: 34px; font-size: 13.5px; }
+  .topbar .btn { min-height: 34px; }
+  .bar .btn { min-height: 40px; }
+  .settings select, .settings input[type=text], .link-row input, .chat-form input { font-size: 16px; }
+  .btn.next kbd, .drag-hint { display: none; }
+  .grp-tag { text-transform: none; letter-spacing: 0; font-size: 12px; }
+  .hand { --cw: calc(46px * var(--size)); }
+}

@@ -76,19 +76,28 @@
   // Translations are applied where text reaches the screen (L). Fixed labels map directly; sentences
   // with names or cards in them are matched by pattern. Card names switch to the Spanish names used at
   // Filipino card tables (Cuatro de Oros); game words (purro, time, sowee, bounit, set, run) stay as they are.
+  // Name markers: si / ni / kay / sina for names, ka / mo / sa iyo for "you".
+  const isYou = n => n === 'You' || n === 'Ikaw';
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const ACT = n => (isYou(n) ? 'ka' : 'si ' + n);          // doer, actor-focus verb: Bumunot ka / Bumunot si Nena
+  const NI = n => (isYou(n) ? 'mo' : 'ni ' + n);          // doer, object-focus verb: Itinapon mo / Itinapon ni Nena
+  const HIS = n => (isYou(n) ? 'mo' : 'niya');
+  const SI = n => (isYou(n) ? 'ikaw' : 'si ' + n);         // topic: ikaw ang... / si Nena ang...
+  const KAY = n => (isYou(n) ? 'sa iyo' : 'kay ' + n);
+  const GROUP = a => { const list = a.replace(/ and /g, ' at '); return (/,| at /.test(list) ? 'sina ' : 'si ') + list; };
   const TL_SEAT = { 'the partner seat': 'kakampi mo', 'the seat on your right': 'nasa kanan mo', 'the seat on your left': 'nasa kaliwa mo' };
   const TL_SRC = { 'drawn from the stock': 'nabunot sa stock', 'taken from the discard pile': 'kinuha sa tapunan', 'claimed with “time” from another player’s stock draw': 'nakuha sa “time” mula sa bunot ng iba', 'the hand was complete as dealt': 'buo na ang hawak mula pa sa deal' };
   const TL = {
     exact: {
       'Rules': 'Patakaran', 'Settings': 'Settings', 'Play with a friend': 'Makipaglaro', 'Chat': 'Chat', 'Install app': 'I-install', 'Filipino rummy · Spanish deck of 112': 'Filipino rummy · 112 barahang Espanyol',
-      'your partner': 'kakampi mo', 'opponent': 'kalaban', 'friend': 'kaibigan', 'dealer': 'dealer', 'shows draws': 'ipinapakita ang bunot', 'away': 'wala muna', 'purro marker': 'purro marker', 'secret': 'secret', 'sowee secret': 'sowee secret',
+      'your partner': 'kakampi mo', 'opponent': 'kalaban', 'friend': 'kaibigan', 'dealer': 'dealer', 'shows draws': 'ipinapakita ang bunot', 'away': 'nadiskonekta', 'purro marker': 'purro marker', 'secret': 'secret', 'sowee secret': 'sowee secret',
       'Stock': 'Stock', 'Discard': 'Tapunan', 'Sowee': 'Sowee', 'Next move': 'Susunod',
-      'Sort': 'Ayusin', 'Suit': 'Suit', 'Rank': 'Numero', 'Auto-group': 'Auto-grupo', 'Take out of group': 'Alisin sa grupo', 'Ungroup all': 'Alisin lahat ng grupo', 'Clear selection': 'Alisin ang pinili',
+      'Sort': 'Ayusin', 'Loose cards by suit, then rank': 'Ayon sa suit, saka sa numero', 'Loose cards by rank, then suit': 'Ayon sa numero, saka sa suit', 'Finished combinations first, then cards one short': 'Unahin ang buo nang kombinasyon, saka ang kulang ng isa', 'Suit': 'Suit', 'Rank': 'Numero', 'Auto-group': 'Auto-grupo', 'Take out of group': 'Alisin sa grupo', 'Ungroup all': 'Alisin ang lahat ng grupo', 'Clear selection': 'Alisin ang pinili',
       'Click more cards to group them.': 'Pumili pa ng baraha para i-grupo.', 'Click cards to select them.': 'I-click ang baraha para piliin.', 'Drag to move them.': 'I-drag para ilipat.', 'Tap cards to select them.': 'I-tap ang baraha para piliin.', 'Press and hold to drag.': 'Pindutin nang matagal para i-drag.', 'Drop a card on the discard pile to discard it.': 'Ihulog ang baraha sa tapunan para itapon.',
-      'Set': 'Set', 'Run': 'Run', 'King': 'King', 'Kings': 'Kings', 'Four alike': 'Apat na pareho', 'Needs 1': 'Kulang 1', 'No match': 'Hindi tugma',
+      'Set': 'Set', 'Run': 'Run', 'King': 'King', 'Kings': 'Kings', 'Four alike': 'Apat na pareho', 'Needs 1': 'Kulang ng 1', 'No match': 'Hindi tugma',
       'Cards are hidden so nobody peeks.': 'Nakatago ang mga baraha para walang sumilip.',
       'Your hand is complete.': 'Buo na ang hawak mo.', 'Purro! Any of these completes your hand: ': 'Purro! Alinman dito ang bubuo sa hawak mo: ',
-      'Deal': 'Mag-deal', 'New match': 'Bagong match', 'Next hand': 'Susunod na hand', 'Show result': 'Ipakita ang resulta', 'Draw from stock': 'Bumunot sa stock', 'End hand (stock empty)': 'Tapusin ang hand (ubos na ang stock)', 'Cancel secret': 'Huwag na ang secret',
+      'Deal': 'Mag-deal', 'New match': 'Bagong match', 'Next hand': 'Susunod na hand', 'Show result': 'Ipakita ang resulta', 'Draw from stock': 'Bumunot sa stock', 'End hand (stock empty)': 'Tapusin ang hand (ubos na ang stock)', 'Cancel secret': 'Huwag nang ilapag ang secret',
       'Discard (select a card)': 'Itapon (pumili ng baraha)', 'Select one card to discard': 'Isang baraha lang ang piliin', 'Kings can’t be discarded': 'Bawal itapon ang king',
       'Four players, partners across the table. Press Deal to start.': 'Apat na manlalaro; magkakampi ang magkaharap. Pindutin ang Mag-deal para magsimula.',
       'The stock ran out. The hand is a draw.': 'Naubos ang stock. Tabla ang hand.', 'The stock is empty and there is nothing to take. End the hand.': 'Ubos na ang stock at walang makukuha. Tapusin ang hand.',
@@ -98,107 +107,109 @@
       'Cuajo is installed. Open it from your home screen or apps.': 'Naka-install na ang Cuajo. Buksan ito mula sa home screen o apps.',
       'Cuajo! You win the hand': 'Cuajo! Panalo ka sa hand na ito', 'Stock exhausted': 'Ubos na ang stock', 'Winning hand': 'Panalong hawak', 'Extra cards drawn from the stock': 'Dagdag na bunot mula sa stock',
       'Payment': 'Bayad', 'Bounit (winning card)': 'Bounit (panalong baraha)', 'Bounit': 'Bounit', 'Kings in the hand': 'Mga king sa hawak', 'Porbis': 'Porbis', 'Bounit from the stock': 'Bounit mula sa stock',
-      'Two cards go with the bounit': 'May dalawang bagay sa bounit', 'A card identical to the sowee + two that go with it': 'May kapareho ng sowee + dalawang bagay dito', 'yes': 'oo', 'no': 'hindi',
+      'Two cards go with the bounit': 'May dalawang barahang bagay sa bounit', 'A card identical to the sowee + two that go with it': 'May kapareho ng sowee at dalawang barahang bagay dito', 'yes': 'oo', 'no': 'hindi',
       'Base payment': 'Batayang bayad', 'Each opponent pays': 'Bayad ng bawat kalaban', 'Your balance': 'Balanse mo', 'Next dealer': 'Susunod na dealer', 'See your stats': 'Tingnan ang stats mo', 'Close': 'Isara',
-      'Match over': 'Tapos na ang match', 'Match': 'Match', 'You share the match win!': 'Tabla ka sa panalo ng match!', 'You win the match!': 'Panalo ka sa match!', 'share the match win.': 'ay tabla sa panalo ng match.', 'wins the match.': 'ang panalo sa match.', 'Your team': 'Team mo', 'Hand': 'Hand', 'of': 'sa', 'First to': 'Unang makaabot ng',
+      'Match over': 'Tapos na ang match', 'Match': 'Match', 'You share the match win!': 'Kasama ka sa mga nanalo sa match!', 'You win the match!': 'Panalo ka sa match!', 'share the match win.': 'ay tabla sa panalo ng match.', 'wins the match.': 'ang panalo sa match.', 'Your team': 'Team mo', 'Hand': 'Hand', 'of': 'ng', 'First to': 'Unang makaabot sa',
       'Time!': 'Time!', 'Let it go': 'Palampasin', 'Time! Claim it': 'Time! Kunin ito',
       'Players': 'Mga manlalaro', 'Your name': 'Pangalan mo', 'Your partner, across the table': 'Kakampi mo, kaharap', 'Opponent on your right': 'Kalaban sa kanan mo', 'Opponent on your left': 'Kalaban sa kaliwa mo',
       'Give the computer players their original names': 'Ibalik ang orihinal na pangalan ng mga computer', 'Reset names': 'I-reset ang pangalan',
       'Game': 'Laro', 'How fast the other players move': 'Bilis ng ibang manlalaro', 'Relaxed': 'Relaks', 'Realistic': 'Parang totoo', 'Quick': 'Mabilis', 'Fast': 'Napakabilis',
-      'Computer players': 'Mga computer na manlalaro', 'Easy: they make plenty of mistakes': 'Madali: madalas silang magkamali', 'Normal: they slip up now and then': 'Normal: paminsan-minsan nagkakamali', 'Hard: they play their best': 'Mahirap: pinakamagaling nilang laro',
+      'Computer players': 'Mga computer na manlalaro', 'Easy: they make plenty of mistakes': 'Madali: madalas silang magkamali', 'Normal: they slip up now and then': 'Normal: paminsan-minsan silang nagkakamali', 'Hard: they play their best': 'Mahirap: naglalaro sila nang pinakamahusay',
       'Match length': 'Haba ng match', 'Free play (no end)': 'Libreng laro (walang katapusan)', '8 hands': '8 hand', '16 hands': '16 hand',
       'After a win, the next deal goes to': 'Pagkatapos manalo, ang magde-deal ay', 'The winner (standard rule)': 'Ang panalo (karaniwang patakaran)', 'The next player to the right': 'Ang susunod sa kanan',
       'Table and cards': 'Mesa at baraha', 'Card size': 'Laki ng baraha', 'Small': 'Maliit', 'Medium': 'Katamtaman', 'Large': 'Malaki', 'Table': 'Mesa', 'Green felt': 'Berdeng felt', 'Blue felt': 'Asul na felt', 'Burgundy felt': 'Burgundy na felt', 'Wooden table': 'Kahoy na mesa',
       'Card backs': 'Likod ng baraha', 'Red': 'Pula', 'Blue': 'Asul', 'Money': 'Pera', 'Pesos (₱)': 'Piso (₱)', 'Dollars ($)': 'Dolyar ($)',
       'Help and sound': 'Tulong at tunog', 'Sounds (card snaps, your-turn chime, Purro and Cuajo calls)': 'Tunog (baraha, hudyat ng turn mo, Purro at Cuajo)', 'Show hints (best discard, useful draws, grouping marks)': 'Ipakita ang payo (pinakamagandang itapon, magagandang bunot, marka ng grupo)',
-      'Your stats: hands won, best streak, biggest payout': 'Stats mo: mga panalo, sunod-sunod na panalo, pinakamalaking panalo', 'View stats': 'Tingnan', 'Cards you pick up go': 'Saan napupunta ang bagong baraha', 'To the right end of your hand': 'Sa dulong kanan ng hawak mo', 'Into place, in suit or rank order': 'Sa tamang puwesto, ayon sa suit o numero',
-      'Open hands (learning mode: see everyone’s cards)': 'Bukas na baraha (pang-aral: kita ang baraha ng lahat)', 'Start a new game (scores back to zero)': 'Bagong laro (balik sa zero ang puntos)', 'Yes, start over': 'Oo, umpisa ulit', 'New game…': 'Bagong laro…',
+      'Your stats: hands won, best streak, biggest payout': 'Stats mo: mga panalo, pinakamahabang sunod na panalo, pinakamalaking napanalunan', 'View stats': 'Tingnan', 'Cards you pick up go': 'Kung saan mapupunta ang bagong baraha', 'To the right end of your hand': 'Sa dulong kanan ng hawak mo', 'Into place, in suit or rank order': 'Sa tamang puwesto, ayon sa suit o numero',
+      'Open hands (learning mode: see everyone’s cards)': 'Bukas na baraha (pang-aral: kita ang baraha ng lahat)', 'Start a new game (scores back to zero)': 'Bagong laro (balik sa zero ang puntos)', 'Yes, start over': 'Oo, magsimula ulit', 'New game…': 'Bagong laro…',
       'Language': 'Wika', 'English': 'English', 'Taglish (Tagalog and English)': 'Taglish (Tagalog at English)',
       'Install Cuajo as an app (home-screen icon, plays offline alone)': 'I-install ang Cuajo bilang app (icon sa home screen, puwedeng offline kapag mag-isa)', 'Installed': 'Naka-install na', 'Install': 'I-install',
       'On iPhone or iPad: tap Share, then Add to Home Screen.': 'Sa iPhone o iPad: i-tap ang Share, tapos Add to Home Screen.', 'Use your browser menu: Install Cuajo, or Add to Home Screen.': 'Gamitin ang menu ng browser: Install Cuajo, o Add to Home Screen.',
-      'My partner (across the table)': 'Kakampi ko (kaharap)', 'My opponent (on my right)': 'Kalaban ko (sa kanan)', 'My (first) friend plays as': 'Ang (unang) kaibigan ay magiging', 'Online, each on your own device': 'Online, kanya-kanyang device',
+      'My partner (across the table)': 'Kakampi ko (kaharap)', 'My opponent (on my right)': 'Kalaban ko (nasa kanan ko)', 'My (first) friend plays as': 'Ang unang kaibigang sasali ay magiging', 'Online, each on your own device': 'Online, kanya-kanyang device',
       'Start a game and send the code or link to up to three friends, or join with the code a friend sent you. Works across different networks.': 'Magsimula ng laro at ipadala ang code o link sa hanggang tatlong kaibigan, o sumali gamit ang code na ipinadala sa iyo. Gumagana kahit magkaiba ang network.',
       'Start an online game': 'Magsimula ng online na laro', 'Game code': 'Code ng laro', 'Join': 'Sumali', 'On this computer': 'Sa computer na ito',
-      'Take turns on one computer. Your cards stay hidden while the other person has it.': 'Maghalinhinan sa iisang computer. Nakatago ang baraha mo habang hawak ng iba.', 'Friend’s name': 'Pangalan ng kaibigan', 'Start pass-and-play': 'Simulan ang pass-and-play',
+      'Take turns on one computer. Your cards stay hidden while the other person has it.': 'Maghalinhinan sa iisang computer. Nakatago ang baraha mo habang hawak ito ng iba.', 'Friend’s name': 'Pangalan ng kaibigan', 'Start pass-and-play': 'Simulan ang pass-and-play',
       'Anyone else can join with this code or link and take over a computer player’s seat.': 'Puwede pang sumali ang iba gamit ang code o link na ito, at papalitan nila ang isang computer.',
       'Send your friends this code or link. The game starts as soon as the first one joins; up to three friends can play, from any network.': 'Ipadala sa mga kaibigan ang code o link na ito. Magsisimula ang laro kapag may unang sumali; hanggang tatlong kaibigan, kahit anong network.',
       'Copy link': 'Kopyahin ang link', 'Copied': 'Nakopya', 'Computer player': 'Computer', 'Waiting for your friends to join': 'Hinihintay ang mga kaibigan', 'Setting up the game': 'Inihahanda ang laro',
-      'Back to playing alone': 'Bumalik sa paglalaro mag-isa', 'Cancel': 'Kanselahin', 'Connected directly.': 'Direktang nakakonekta.', 'Connecting to game': 'Kumokonekta sa laro', '(this can take up to 15 seconds on some networks)': '(puwedeng umabot ng 15 segundo sa ibang network)',
+      'Back to playing alone': 'Bumalik sa paglalaro nang mag-isa', 'Cancel': 'Kanselahin', 'Connected directly.': 'Direktang nakakonekta.', 'Connecting to game': 'Kumokonekta sa laro', '(this can take up to 15 seconds on some networks)': '(puwedeng umabot ng 15 segundo sa ibang network)',
       'Type the game code your friend sent you.': 'I-type ang code na ipinadala ng kaibigan mo.', 'That game is full.': 'Puno na ang larong iyon.', 'Could not load the online connection.': 'Hindi ma-load ang online na koneksyon.',
-      'Could not reach the connection services.': 'Hindi maabot ang connection services.', 'Check the internet connection and try again.': 'Tingnan ang internet at subukan ulit.',
+      'Could not reach the connection services.': 'Hindi maabot ang connection services.', 'Check the internet connection and try again.': 'Tingnan ang koneksyon sa internet at subukan ulit.',
       'Online game': 'Online na laro', 'a friend': 'kaibigan', 'Say hello, or tap a quick message.': 'Mag-hello, o pumili ng mabilis na mensahe.', 'Type a message': 'Mag-type ng mensahe', 'Send': 'Ipadala', 'You': 'Ikaw', 'Friend': 'Kaibigan',
-      'Your stats': 'Stats mo', 'Hands played': 'Hand na nalaro', 'Hands won': 'Hand na napanalunan', 'Best winning streak': 'Pinakamahabang sunod na panalo', 'Biggest payout': 'Pinakamalaking panalo', 'Money won in total': 'Kabuuang napanalunan', 'Times purro': 'Beses na naka-purro', 'Secrets laid down': 'Secret na nailapag', 'Porbis wins': 'Panalong porbis', 'Matches won': 'Match na napanalunan',
-      'How you won': 'Paano ka nanalo', 'Drew the winning card': 'Nabunot ang panalong baraha', 'Called time': 'Nag-time', 'Took it from the discard pile': 'Kinuha sa tapunan',
+      'Your stats': 'Stats mo', 'Hands played': 'Mga hand na nalaro', 'Hands won': 'Mga hand na napanalunan', 'Best winning streak': 'Pinakamahabang sunod na panalo', 'Biggest payout': 'Pinakamalaking napanalunan', 'Money won in total': 'Kabuuang napanalunan', 'Times purro': 'Ilang beses naka-purro', 'Secrets laid down': 'Mga secret na nailapag', 'Porbis wins': 'Mga panalong porbis', 'Matches won': 'Mga match na napanalunan',
+      'How you won': 'Paano ka nanalo', 'Drew the winning card': 'Nabunot ang panalong baraha', 'Called time': 'Nanalo sa \u201ctime\u201d', 'Took it from the discard pile': 'Kinuha sa tapunan',
       'Stats are kept on this device and count your own seat, whether you play alone, pass-and-play or online.': 'Nakatago ang stats sa device na ito at binibilang ang sarili mong puwesto, mag-isa man, pass-and-play o online.', 'Yes, reset my stats': 'Oo, burahin ang stats ko', 'Reset stats…': 'I-reset ang stats…',
     },
     patterns: [
       // log lines written by the game engine
-      [/^Hand (\d+): (.+) deals\. The sowee is the (.+)\.$/, 'Hand $1: $2 ang nag-deal. Ang sowee ay $3.'],
-      [/^(.+) draws from the stock\.$/, '$1: bumunot sa stock.'],
-      [/^(.+) draws the (.+) and shows it \(someone is purro\)\.$/, '$1: bumunot ng $2 at ipinakita ito (may naka-purro).'],
-      [/^(.+) draws the (.+) and shows it \(the turns after a broken purro\)\.$/, '$1: bumunot ng $2 at ipinakita ito (nasira ang purro).'],
-      [/^(.+) says "time!" and claims the (.+)\.$/, '$1: “Time!” at kinuha ang $2.'],
-      [/^(.+) lets the (.+) go\.$/, '$1: pinalampas ang $2.'],
-      [/^(.+) takes the (.+) from the discard pile\.$/, '$1: kinuha ang $2 sa tapunan.'],
-      [/^(.+) lays down a secret \(the three cards matching the sowee, with a fourth card that still has to be melded\) and collects (.+) from each opponent\.$/, '$1: naglapag ng sowee secret at kumuha ng $2 sa bawat kalaban.'],
-      [/^(.+) lays down a secret and collects (.+) from each opponent\.$/, '$1: naglapag ng secret at kumuha ng $2 sa bawat kalaban.'],
-      [/^(.+) discards the (.+)\.$/, '$1: itinapon ang $2.'],
-      [/^(.+) has served the two turns after the broken purro and plays normally again\.$/, '$1: tapos na ang parusa sa nasirang purro.'],
-      [/^(.+) says "purro" — one card away from winning!$/, '$1: “Purro!” Isang baraha na lang!'],
-      [/^(.+) is no longer purro: .*$/, '$1: hindi na naka-purro. Sa susunod na dalawang turn, ipapakita ang bunot at bawal manalo.'],
+      [/^Hand (\d+): (.+) deals\. The sowee is the (.+)\.$/, (m, h, a, c) => 'Hand ' + h + ': ' + SI(a) + ' ang nag-deal. Ang sowee ay ang ' + c + '.'],
+      [/^(.+) draws from the stock\.$/, (m, a) => 'Bumunot ' + ACT(a) + ' sa stock.'],
+      [/^(.+) draws the (.+) and shows it \(someone is purro\)\.$/, (m, a, c) => 'Bumunot ' + ACT(a) + ' ng ' + c + ' at ipinakita ' + HIS(a) + ' ito dahil may naka-purro.'],
+      [/^(.+) draws the (.+) and shows it \(the turns after a broken purro\)\.$/, (m, a, c) => 'Bumunot ' + ACT(a) + ' ng ' + c + ' at ipinakita ' + HIS(a) + ' ito dahil nasira ang purro ' + HIS(a) + '.'],
+      [/^(.+) says "time!" and claims the (.+)\.$/, (m, a, c) => '“Time!” sabi ' + NI(a) + ', at kinuha ' + HIS(a) + ' ang ' + c + '.'],
+      [/^(.+) lets the (.+) go\.$/, (m, a, c) => 'Pinalampas ' + NI(a) + ' ang ' + c + '.'],
+      [/^(.+) takes the (.+) from the discard pile\.$/, (m, a, c) => 'Kinuha ' + NI(a) + ' ang ' + c + ' mula sa tapunan.'],
+      [/^(.+) lays down a secret \(the three cards matching the sowee, with a fourth card that still has to be melded\) and collects (.+) from each opponent\.$/, (m, a, c) => 'Naglapag ' + ACT(a) + ' ng sowee secret at nakasingil ng ' + c + ' sa bawat kalaban.'],
+      [/^(.+) lays down a secret and collects (.+) from each opponent\.$/, (m, a, c) => 'Naglapag ' + ACT(a) + ' ng secret at nakasingil ng ' + c + ' sa bawat kalaban.'],
+      [/^(.+) discards the (.+)\.$/, (m, a, c) => 'Itinapon ' + NI(a) + ' ang ' + c + '.'],
+      [/^(.+) has served the two turns after the broken purro and plays normally again\.$/, (m, a) => 'Tapos na ang parusa ' + (isYou(a) ? 'mo' : 'ni ' + a) + ' dahil sa nasirang purro; normal na ulit ang laro ' + HIS(a) + '.'],
+      [/^(.+) says "purro" — one card away from winning!$/, (m, a) => '“Purro!” sabi ' + NI(a) + '. Isang baraha na lang ang kulang ' + HIS(a) + '.'],
+      [/^(.+) is no longer purro: .*$/, (m, a) => (isYou(a) ? 'Hindi ka na naka-purro' : 'Hindi na naka-purro si ' + a) + '. Sa susunod na dalawang turn, ipapakita ' + HIS(a) + ' ang bawat bunot at bawal ' + (isYou(a) ? 'kang' : 'siyang') + ' manalo.'],
       [/^The stock is exhausted: the hand is a draw and nobody pays\.$/, 'Ubos na ang stock: tabla ang hand at walang magbabayad.'],
-      [/^Cuajo! (.+) wins and collects (.+) from each opponent after drawing (\d+) extra cards? from the stock\.$/, 'Cuajo! $1 ang panalo at kumuha ng $2 sa bawat kalaban, matapos bumunot ng $3 dagdag na baraha.'],
-      [/^Cuajo! (.+) wins and collects (.+) from each opponent\.$/, 'Cuajo! $1 ang panalo at kumuha ng $2 sa bawat kalaban.'],
+      [/^Cuajo! (.+) wins and collects (.+) from each opponent after drawing (\d+) extra cards? from the stock\.$/, (m, a, c, n) => 'Cuajo! Nanalo ' + ACT(a) + ' at nakasingil ng ' + c + ' sa bawat kalaban, matapos bumunot ng ' + n + ' dagdag na baraha sa stock.'],
+      [/^Cuajo! (.+) wins and collects (.+) from each opponent\.$/, (m, a, c) => 'Cuajo! Nanalo ' + ACT(a) + ' at nakasingil ng ' + c + ' sa bawat kalaban.'],
       // status line
-      [/^(.+) deal the cards…$/, '$1 ang nagde-deal…'], [/^(.+) is dealing…$/, '$1 ang nagde-deal…'],
-      [/^Pass the computer to (.+)\.$/, 'Ibigay ang computer kay $1.'],
-      [/^Cuajo! (.+) wins the hand\.$/, 'Cuajo! $1 ang panalo sa hand na ito.'],
+      [/^(.+) deal the cards…$/, (m, a) => cap(SI(a)) + ' ang nagde-deal…'], [/^(.+) is dealing…$/, (m, a) => cap(SI(a)) + ' ang nagde-deal…'],
+      [/^Pass the computer to (.+)\.$/, (m, a) => 'Ibigay ang computer ' + KAY(a) + '.'],
+      [/^Cuajo! (.+) wins the hand\.$/, (m, a) => 'Cuajo! ' + cap(SI(a)) + ' ang panalo sa hand na ito.'],
       [/^Time! You can claim the (.+)\.$/, 'Time! Puwede mong kunin ang $1.'],
-      [/^(.+) is looking at the shown card…$/, '$1: tinitingnan ang ipinakitang baraha…'],
-      [/^(.+) is drawing…$/, '$1: bumubunot…'], [/^(.+) is choosing a discard…$/, '$1: pumipili ng itatapon…'],
+      [/^(.+) is looking at the shown card…$/, (m, a) => 'Tinitingnan ' + NI(a) + ' ang ipinakitang baraha…'],
+      [/^(.+) is drawing…$/, (m, a) => 'Bumubunot ' + ACT(a) + '…'], [/^(.+) is choosing a discard…$/, (m, a) => 'Pumipili ' + ACT(a) + ' ng itatapon…'],
       [/^The stock is empty, but the (.+) completes your hand: take it to win, or end the hand\.$/, 'Ubos na ang stock, pero bubuo sa hawak mo ang $1: kunin ito para manalo, o tapusin ang hand.'],
       [/^The stock is empty and the (.+) does not complete your hand\. End the hand\.$/, 'Ubos na ang stock at hindi bubuo sa hawak mo ang $1. Tapusin ang hand.'],
       [/^The (.+) completes your hand! Take it to win\.$/, 'Bubuo sa hawak mo ang $1! Kunin ito para manalo.'],
-      [/^Draw from the stock, or take the (.+) from the discard pile\.$/, 'Bumunot sa stock, o kunin ang $1 sa tapunan.'],
-      [/^Your purro was broken: this draw is shown and you cannot win for (\d+) more turns?\.$/, 'Nasira ang purro mo: ipapakita ang bunot na ito at hindi ka puwedeng manalo sa susunod na $1 turn.'],
+      [/^Draw from the stock, or take the (.+) from the discard pile\.$/, 'Bumunot sa stock, o kunin ang $1 mula sa tapunan.'],
+      [/^Your purro was broken: this draw is shown and you cannot win for (\d+) more turns?\.$/, 'Nasira ang purro mo: ipapakita ang bunot na ito, at hindi ka puwedeng manalo sa susunod na $1 turn.'],
       [/^Choose any fourth card from your hand to lay down with your three (.+) cards\.$/, 'Pumili ng ikaapat na baraha na ilalapag kasama ng tatlong $1.'],
-      [/^You drew the (.+)\.$/, 'Nabunot mo ang $1.'], [/^You took the (.+)\.$/, 'Kinuha mo ang $1.'], [/^Discard the (.+)\?$/, 'Itapon ang $1?'],
+      [/^You drew the (.+)\.$/, 'Nabunot mo ang $1.'], [/^You took the (.+)\.$/, 'Kinuha mo ang $1.'], [/^Discard the (.+)\?$/, 'Itatapon mo ba ang $1?'],
       // notices
-      [/^(.+) joined the game\.$/, 'Sumali si $1 sa laro.'], [/^(.+) is back in the game\.$/, 'Nakabalik na si $1.'],
-      [/^(.+) joined and takes over (the partner seat|the seat on your right|the seat on your left)\.$/, (m, a, b) => 'Sumali si ' + a + '; siya na ang ' + TL_SEAT[b] + '.'],
-      [/^(.+) left\. A computer player takes that seat\.$/, 'Umalis si $1. Computer na ang maglalaro sa puwesto niya.'],
-      [/^(.+) lost the connection\. A computer player fills in until they rejoin\.$/, 'Naputol ang koneksyon ni $1. Computer muna ang maglalaro hanggang makabalik siya.'],
-      [/^(.+) ended the online game\. You are back in your own game\.$/, 'Tinapos ni $1 ang online na laro. Balik ka sa sarili mong laro.'],
-      [/^Could not reconnect to (.+)\. You are back in your own game\.$/, 'Hindi makakonekta ulit kay $1. Balik ka sa sarili mong laro.'],
+      [/^(.+) joined the game\.$/, (m, a) => 'Sumali ' + ACT(a) + ' sa laro.'], [/^(.+) is back in the game\.$/, (m, a) => (isYou(a) ? 'Nakabalik ka na.' : 'Nakabalik na si ' + a + '.')],
+      [/^(.+) joined and takes over (the partner seat|the seat on your right|the seat on your left)\.$/, (m, a, b) => 'Sumali ' + ACT(a) + ', at siya na ang ' + TL_SEAT[b] + '.'],
+      [/^(.+) left\. A computer player takes that seat\.$/, (m, a) => 'Umalis ' + ACT(a) + '. Computer na ang maglalaro sa puwesto niya.'],
+      [/^(.+) lost the connection\. A computer player fills in until they rejoin\.$/, (m, a) => 'Naputol ang koneksyon ' + NI(a) + '. Computer muna ang maglalaro hanggang makabalik siya.'],
+      [/^(.+) ended the online game\. You are back in your own game\.$/, (m, a) => 'Tinapos ' + NI(a) + ' ang online na laro. Nakabalik ka na sa sarili mong laro.'],
+      [/^Could not reconnect to (.+)\. You are back in your own game\.$/, (m, a) => 'Hindi makakonekta ulit ' + KAY(a) + '. Nakabalik ka na sa sarili mong laro.'],
       [/^No game found with code (.+)\. Check the code with your friend, and make sure their game is still open\.$/, 'Walang laro na may code na $1. Tiyakin ang code sa kaibigan mo, at dapat bukas pa ang laro niya.'],
       [/^Online play works on the website \((.+)\) and in the downloaded file, but not inside the Claude preview\.$/, 'Gumagana ang online sa website ($1) at sa na-download na file, pero hindi sa loob ng Claude preview.'],
       // hints and buttons
-      [/^Hint: take the (.+) from the discard pile\. It brings you closer than a blind draw\.$/, 'Payo: kunin ang $1 sa tapunan. Mas mapapalapit ka nito sa panalo kaysa bumunot.'],
+      [/^Hint: take the (.+) from the discard pile\. It brings you closer than a blind draw\.$/, 'Payo: kunin ang $1 mula sa tapunan. Mas mapapalapit ka nito sa panalo kaysa bumunot.'],
       [/^Hint: discarding the (.+) leaves you (\d+) cards? from a complete hand\.$/, 'Payo: kapag itinapon mo ang $1, $2 baraha na lang ang kulang mo.'],
       [/^You need (\d+) more cards?\. Useful draws: $/, 'Kulang ka pa ng $1 baraha. Magagandang bunot: '],
       [/^ \+(\d+) more$/, ' +$1 pa'],
       [/^Take the (.+)$/, 'Kunin ang $1'], [/^Discard the (.+)$/, 'Itapon ang $1'], [/^Group (\d+) cards$/, 'I-grupo ang $1 baraha'],
-      [/^Lay down secret: four (.+)$/, 'Ilapag ang secret: apat na $1'], [/^Lay down secret: three (.+) \(sowee\) \+ one card$/, 'Ilapag ang secret: tatlong $1 (sowee) + isang baraha'],
-      [/^(.+)’s turn\.$/, 'Turn na ni $1.'], [/^I’m (.+), show my cards$/, 'Ako si $1, ipakita ang baraha ko'], [/^Show (.+)’s cards$/, 'Ipakita ang baraha ni $1'],
+      [/^Lay down secret: four (.+)$/, 'Ilapag ang secret: apat na $1'], [/^Lay down secret: three (.+) \(sowee\) \+ one card$/, 'Ilapag ang secret: tatlong $1 (sowee) at isa pang baraha'],
+      [/^(.+)’s turn\.$/, (m, a) => (isYou(a) ? 'Turn mo na.' : 'Turn na ni ' + a + '.')], [/^I’m (.+), show my cards$/, 'Ako si $1, ipakita ang baraha ko'],
+      [/^Show (.+)’s cards$/, (m, a) => (isYou(a) ? 'Ipakita ang baraha mo' : 'Ipakita ang baraha ni ' + a)],
       [/^(\d+) cards?$/, '$1 baraha'], [/^broken purro: (\d+) turns? left$/, 'sirang purro: $1 turn pa'], [/^(\d+) combinations$/, '$1 kombinasyon'],
       // result dialog
-      [/^Cuajo! (.+) \(your partner\) wins the hand$/, 'Cuajo! Panalo ang kakampi mong si $1'], [/^Cuajo! (.+) wins the hand$/, 'Cuajo! Panalo si $1'],
-      [/^Nobody completed a hand before the stock ran out, so the hand is a draw and nobody pays \(secrets already paid stand\)\. (.+) deals again\.$/, 'Walang nakabuo bago naubos ang stock, kaya tabla ang hand at walang magbabayad (mananatili ang bayad sa mga secret). Si $1 ulit ang magde-deal.'],
-      [/^The conditions were not met from the hand, so (\d+) extra cards? (?:was|were) drawn \(up to 15 allowed\) until both conditions held\.$/, 'Hindi natupad ang mga kondisyon mula sa hawak, kaya bumunot ng $1 dagdag na baraha (hanggang 15) hanggang matupad ang dalawa.'],
-      [/^The conditions were not met from the hand, so (\d+) extra cards? (?:was|were) drawn \(up to 15 allowed\) without meeting both conditions\.$/, 'Hindi natupad ang mga kondisyon mula sa hawak, kaya bumunot ng $1 dagdag na baraha (hanggang 15), pero hindi natupad ang dalawa.'],
+      [/^Cuajo! (.+) \(your partner\) wins the hand$/, 'Cuajo! Panalo ang kakampi mong si $1'], [/^Cuajo! (.+) wins the hand$/, (m, a) => (isYou(a) ? 'Cuajo! Panalo ka' : 'Cuajo! Panalo si ' + a)],
+      [/^Nobody completed a hand before the stock ran out, so the hand is a draw and nobody pays \(secrets already paid stand\)\. (.+) deals again\.$/, (m, a) => 'Walang nakabuo bago naubos ang stock, kaya tabla ang hand at walang magbabayad (mananatili ang bayad sa mga secret). ' + cap(SI(a)) + ' ulit ang magde-deal.'],
+      [/^The conditions were not met from the hand, so (\d+) extra cards? (?:was|were) drawn \(up to 15 allowed\) until both conditions held\.$/, 'Hindi natupad ang mga kondisyon mula sa hawak, kaya bumunot ng $1 dagdag na baraha (hanggang 15 ang puwede) hanggang matupad ang dalawa.'],
+      [/^The conditions were not met from the hand, so (\d+) extra cards? (?:was|were) drawn \(up to 15 allowed\) without meeting both conditions\.$/, 'Hindi natupad ang mga kondisyon mula sa hawak, kaya bumunot ng $1 dagdag na baraha (hanggang 15 ang puwede), pero hindi pa rin natupad ang dalawa.'],
       [/^(.+) — (drawn from the stock|taken from the discard pile|claimed with “time” from another player’s stock draw|the hand was complete as dealt)$/, (m, a, b) => a + ' — ' + TL_SRC[b]],
       [/^(drawn from the stock|taken from the discard pile|claimed with “time” from another player’s stock draw|the hand was complete as dealt)$/, (m, a) => TL_SRC[a]],
-      [/^(\d+) \(worth (.+)\)$/, '$1 (halagang $2)'], [/^no kings, or one king inside its jack-horse-king run: a flat (.+)$/, 'walang king, o isang king sa loob ng jack-horse-king: flat na $1'],
+      [/^(\d+) \(worth (.+)\)$/, '$1 (halagang $2)'], [/^no kings, or one king inside its jack-horse-king run: a flat (.+)$/, 'walang king, o may isang king sa loob ng sota-caballo-rey: flat na $1'],
       [/^(.+) \(partners do not pay each other\)$/, '$1 (hindi nagbabayaran ang magkakampi)'], [/^(.+) \(the winner deals\)$/, '$1 (ang panalo ang magde-deal)'], [/^(.+) \(the deal passes to the right\)$/, '$1 (lilipat ang deal sa kanan)'],
-      [/^(.+) drew the (.+) from the stock and showed it because you are purro\. It completes your hand: say “time” to claim it and win\.$/, '$1 ay nakabunot ng $2 at ipinakita ito dahil naka-purro ka. Bubuo ito sa hawak mo: sabihin ang “time” para kunin at manalo.'],
+      [/^(.+) drew the (.+) from the stock and showed it because you are purro\. It completes your hand: say “time” to claim it and win\.$/, (m, a, c) => 'Nakabunot ' + ACT(a) + ' ng ' + c + ' mula sa stock at ipinakita ' + HIS(a) + ' ito dahil naka-purro ka. Bubuo ito sa hawak mo: sabihin ang “time” para kunin ito at manalo.'],
+      [/^(.+) wins the match\.$/, (m, a) => cap(SI(a)) + ' ang panalo sa match.'], [/^(.+) share the match win\.$/, (m, a) => 'Tabla sa panalo ng match ' + GROUP(a) + '.'],
       // settings, friends, chat
-      [/^(.+) \(computer\)$/, (m, a) => L(a) + ' (computer)'], [/^(.+) \(a person\)$/, '$1 (tao)'], [/^First to (.+)$/, 'Unang makaabot ng $1'],
+      [/^(.+) \(computer\)$/, (m, a) => L(a) + ' (computer)'], [/^(.+) \(a person\)$/, '$1 (tao)'], [/^First to (.+)$/, 'Unang makaabot sa $1'],
       [/^Open the website to install: (.+)$/, 'Buksan ang website para i-install: $1'],
       [/^(.+) \(reconnecting…\)$/, '$1 (kumokonekta ulit…)'], [/^(.+) \(via relay\)$/, '$1 (sa relay)'],
       [/^You joined (.+)’s game as their partner\.$/, 'Sumali ka sa laro ni $1 bilang kakampi niya.'], [/^You joined (.+)’s game as their opponent\.$/, 'Sumali ka sa laro ni $1 bilang kalaban niya.'],
-      [/^You are sharing this computer with (.+)\.$/, 'Kasama mo si $1 sa computer na ito.'], [/^Also playing: (.+)\.$/, (m, a) => 'Kasali rin: ' + a.replace(/ and /g, ' at ') + '.'],
-      [/^Connected through relay servers \((\d+) of (\d+) reachable\)\.$/, 'Nakakonekta sa relay servers ($1 sa $2 ang abot).'],
-      [/^Pass-and-play with (.+)$/, 'Pass-and-play kasama si $1'], [/^Online with (.+)$/, (m, a) => 'Online kasama si ' + a.replace(/ and /g, ' at ')], [/^Online in (.+)’s game$/, 'Online sa laro ni $1'],
+      [/^You are sharing this computer with (.+)\.$/, 'Kasama mo si $1 sa computer na ito.'], [/^Also playing: (.+)\.$/, (m, a) => 'Kasali rin ' + GROUP(a) + '.'],
+      [/^Connected through relay servers \((\d+) of (\d+) reachable\)\.$/, 'Nakakonekta sa relay servers ($1 sa $2 ang naaabot).'],
+      [/^Pass-and-play with (.+)$/, (m, a) => 'Pass-and-play kasama ' + GROUP(a)], [/^Online with (.+)$/, (m, a) => 'Online kasama ' + GROUP(a)], [/^Online in (.+)’s game$/, 'Online sa laro ni $1'],
       [/^Chat \((\d+)\)$/, 'Chat ($1)'],
     ],
   };
@@ -284,7 +295,7 @@
     const s = C.suitOf(t), r = C.rankOf(t), suit = C.SUITS[s], ix = INDEX[r];
     if (mini) return '<svg class="face" viewBox="0 0 100 155" aria-hidden="true"><text x="50" y="62" text-anchor="middle" class="ix big">' + ix + '</text>' + emblemAt(suit, 50, 110, 40) + '</svg>';
     const body = r === 0 ? aceArt(suit) : r <= 3 ? pipsLayout(suit, r) : courtArt(suit, r, s);
-    const idx = '<text x="8" y="26" class="ix">' + ix + '</text>' + (isLong(suit) ? '' : pipAt(suit, 14, 39, 12));
+    const idx = '<text x="7" y="28" class="ix">' + ix + '</text>' + (isLong(suit) ? '' : pipAt(suit, 14, 42, 12));
     return '<svg class="face" viewBox="0 0 100 155" aria-hidden="true">' + frame(s) + body + '<g>' + idx + '</g><g transform="rotate(180 50 77.5)">' + idx + '</g></svg>';
   }
   function cardEl(t, o) {
@@ -1040,15 +1051,37 @@
     render();
   }
 
+  // One "Sort" button that opens a short menu; choosing an item always re-sorts, even if it is the current one.
+  const SORTS = [['suit', 'Suit', 'Loose cards by suit, then rank'], ['rank', 'Rank', 'Loose cards by rank, then suit'], ['combos', 'Auto-group', 'Finished combinations first, then cards one short']];
+  let sortMenuOpen = false;
+  function sortDropdown() {
+    const wrap = el('div', 'sort-dd');
+    const cur = SORTS.find(x => x[0] === settings.sortMode) || SORTS[0];
+    const b = el('button', 'btn chip sort-btn'); b.type = 'button'; b.dataset.key = 'sort-btn';
+    b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', sortMenuOpen ? 'true' : 'false');
+    b.append(el('span', 'sort-lbl', 'Sort'), el('span', 'sort-cur', cur[1]), el('span', 'caret', '\u25BE'));
+    b.addEventListener('click', e => { e.stopPropagation(); sortMenuOpen = !sortMenuOpen; render(); if (sortMenuOpen) { const f = $('.sort-menu [role=menuitemradio]'); if (f) f.focus(); } });
+    wrap.append(b);
+    if (sortMenuOpen) {
+      const menu = el('div', 'sort-menu'); menu.setAttribute('role', 'menu');
+      for (const [m, label, tip] of SORTS) {
+        const it = el('button', 'sort-item' + (settings.sortMode === m ? ' on' : '')); it.type = 'button';
+        it.setAttribute('role', 'menuitemradio'); it.setAttribute('aria-checked', settings.sortMode === m ? 'true' : 'false'); it.dataset.key = 'sort-' + m;
+        it.append(el('b', null, label), el('small', null, tip));
+        it.addEventListener('click', e => { e.stopPropagation(); sortMenuOpen = false; sortHand(m); });
+        menu.append(it);
+      }
+      wrap.append(menu);
+    }
+    return wrap;
+  }
+  document.addEventListener('click', e => { if (sortMenuOpen && !(e.target.closest && e.target.closest('.sort-dd'))) { sortMenuOpen = false; render(); } });
+  document.addEventListener('keydown', e => { if (sortMenuOpen && e.key === 'Escape') { sortMenuOpen = false; render(); const b = $('.sort-btn'); if (b) b.focus(); } });
+
   function renderHandTools() {
     const tools = $('#hand-tools'); tools.innerHTML = '';
     if (g.phase === 'idle' || dealing || !g.hands[ME].length) return;
-    tools.append(el('span', 'lbl', 'Sort'));
-    for (const [m, label, tip] of [['suit', 'Suit', 'Sort loose cards by suit, then rank'], ['rank', 'Rank', 'Sort loose cards by rank, then suit'], ['combos', 'Auto-group', 'Group your cards into finished combinations and cards that are one short']]) {
-      const b = btn(label, () => sortHand(m), 'chip' + (settings.sortMode === m ? ' on' : ''));
-      b.title = tip; b.dataset.key = 'sort-' + m;
-      tools.append(b);
-    }
+    tools.append(sortDropdown());
     if (selIds.length >= 2) { const b = btn('Group ' + selIds.length + ' cards', groupSelected, 'chip primary'); b.dataset.key = 'group-sel'; tools.append(b); }
     if (selIds.some(id => groupOf[id] != null)) { const b = btn('Take out of group', ungroupSelected, 'chip'); b.dataset.key = 'ungroup-sel'; tools.append(b); }
     if (Object.keys(groupOf).length && !selIds.length) { const b = btn('Ungroup all', ungroupAll, 'chip'); b.dataset.key = 'ungroup-all'; tools.append(b); }
@@ -2004,7 +2037,7 @@
     box.append(el('h3', null, m.done ? 'Match over' : 'Match'));
     if (m.done) {
       const mine = m.winners.indexOf(ME) >= 0;
-      box.append(el('p', 'match-win', mine ? (m.winners.length > 1 ? L('You share the match win!') : L('You win the match!')) : joinNames(m.winners.map(name)) + ' ' + (m.winners.length > 1 ? L('share the match win.') : L('wins the match.'))));
+      box.append(el('p', 'match-win', mine ? (m.winners.length > 1 ? 'You share the match win!' : 'You win the match!') : joinNames(m.winners.map(name)) + (m.winners.length > 1 ? ' share the match win.' : ' wins the match.')));
     } else box.append(el('p', null, matchProgress()));
     const dl = el('dl', 'kv');
     for (const s of [ME, C.partnerOf(ME), (ME + 1) % 4, (ME + 3) % 4]) dl.append(el('dt', null, name(s)), el('dd', null, C.money(sc[s])));
@@ -2103,16 +2136,16 @@
     '<p>Ang Cuajo (kuajo o kuwaho) ay Filipino rummy na kamag-anak ng mahjong. Ginagamit ang 112 barahang Espanyol: oros, copas, espadas at bastos. Bawat suit ay may as, tres, cuatro, cinco, sota, caballo at rey, at tig-apat na kopya ang bawat baraha.</p>',
     '<p>Sa baraha, 1 ang as, 10 ang sota, 11 ang caballo at 12 ang rey. Makikita ang suit sa mga puwang sa linya ng frame: wala sa oros, isa sa copas, dalawa sa espadas, tatlo sa bastos.</p>',
     '<h3>Manlalaro at deal</h3>',
-    '<p>Apat ang naglalaro, at magkakampi ang magkaharap. 16 na baraha ang sa dealer at 15 sa iba. Ang susunod na baraha ay ibinubukas bilang <b>sowee</b>: hindi ito nilalaro pero may epekto sa bayad. Ang natira ay ang stock. Ang dealer ang unang magtatapon, at pakanan ang ikot ng laro. Ang nanalo ang magde-deal sa susunod; kapag tabla, parehong dealer ulit.</p>',
+    '<p>Apat ang naglalaro, at magkakampi ang magkaharap. Labing-anim na baraha ang hawak ng dealer at labinlima naman ang sa iba. Ang susunod na baraha ay ibinubukas bilang <b>sowee</b>: hindi ito nilalaro pero may epekto sa bayad. Ang matitira ang magiging stock. Ang dealer ang unang magtatapon, at pakanan ang ikot ng laro. Ang nanalo ang magde-deal sa susunod; kapag tabla, parehong dealer ulit.</p>',
     '<h3>Sa turn mo</h3>',
-    '<ol><li>Bumunot sa stock, o kunin ang huling itinapon ng naunang manlalaro. Ang susunod lang sa turn ang puwedeng kumuha ng itinapon.</li><li>Kung may apat kang magkaparehong baraha, puwede mo itong ilapag nang nakataob bilang <b>secret</b>, at magbabayad sa iyo ng 50 sentimo ang bawat kalaban. Ang tatlong kapareho ng sowee, kasama ang kahit anong ikaapat na baraha, ay secret din; pero kailangan pa ring bahagi ng kombinasyon ang ikaapat na iyon sa pagpanalo, kaya king ang karaniwang pinipili.</li><li>Magtapon ng isang baraha. <b>Bawal itapon ang king.</b></li></ol>',
+    '<ol><li>Bumunot sa stock, o kunin ang huling itinapon ng naunang manlalaro. Ang susunod lang sa turn ang puwedeng kumuha ng itinapon.</li><li>Kung may apat kang magkaparehong baraha, puwede mo itong ilapag nang nakataob bilang <b>secret</b>, at magbabayad sa iyo ng 50 sentimo ang bawat kalaban. Ang tatlong kapareho ng sowee, kasama ang kahit anong ikaapat na baraha, ay secret din; pero kailangan pa ring bahagi ng kombinasyon ang ikaapat na iyon sa pagpanalo, kaya king ang karaniwang pinipili.</li><li>Magtapon ng isang baraha. <b>Hindi puwedeng itapon ang king.</b></li></ol>',
     '<h3>Mga kombinasyon</h3>',
     '<ul><li><b>Set</b>: tatlo o apat na magkaparehong numero na magkakaiba ang suit.</li><li><b>Run</b>: 3-4-5 o sota-caballo-rey sa iisang suit (hindi puwede ang as).</li><li><b>Secret</b>: apat na magkaparehong baraha.</li><li><b>King</b>: kombinasyon na ang isang king kahit mag-isa.</li></ul>',
     '<h3>Purro at time</h3>',
-    '<p>Kapag isang baraha na lang ang kulang mo, sabihin ang <b>purro</b> pagkatapos magtapon at maglabas ng isang king bilang marker. Mula noon, ipinapakita ng iba ang bawat bunot nila sa stock. Kapag may nakabunot ng barahang kailangan mo, sabihin ang <b>time</b>, kunin ito, at panalo ka. Kung dalawa ang kailangan ng parehong baraha, panalo ang bumunot kung buo rin siya; kung hindi, ang unang naka-purro pagkatapos niya. Kapag hindi mo turn, sa bunot lang mula sa stock puwedeng manalo, hindi sa itinapon.</p>',
+    '<p>Kapag isang baraha na lang ang kulang mo, sabihin ang <b>purro</b> pagkatapos magtapon at maglabas ng isang king bilang marker. Mula noon, ipinapakita ng iba ang bawat bunot nila sa stock. Kapag may nakabunot ng barahang kailangan mo, sabihin ang <b>time</b>, kunin ito, at panalo ka. Kung higit sa isa ang nangangailangan ng parehong baraha, panalo ang bumunot kung bubuo rin ito sa hawak niya; kung hindi, panalo ang unang naka-purro na kasunod niya. Kapag hindi mo turn, puwede ka lang manalo sa baraha na binunot mula sa stock, hindi sa itinapon.</p>',
     '<p>Kapag nasira ang purro mo (halimbawa, nakabunot ka ng king na hindi bumuo), hindi ka na naka-purro. Sa susunod na dalawang turn, ipapakita mo ang bawat bunot at bawal kang mag-purro o manalo; sa ikatlong turn, normal na ulit.</p>',
     '<h3>Pagpanalo at bayad</h3>',
-    '<p>Panalo ang unang makabuo ng 16 na baraha (kasama ang secret) sa mga kombinasyon. Ang panalong baraha ay ang <b>bounit</b>. Bawat kalaban ang nagbabayad sa panalo; hindi nagbabayaran ang magkakampi. Dalawang bagay ang nagpapalaki ng bayad: (1) may dalawang baraha sa hawak mo na <b>bagay</b> sa bounit, at (2) may kapareho ka ng sowee at dalawang bagay dito. Bagay ang baraha kapag bumubuo ito ng run sa parehong suit; para sa as, dalawang as na magkaibang suit. Kung galing sa iba ang bounit at hindi natupad ang mga kondisyon, puwedeng bumunot ng hanggang 15 dagdag na baraha para hanapin ang kailangan; hindi na kailangang i-meld ang mga iyon at walang dagdag na halaga ang king mula doon.</p>',
+    '<p>Panalo ang unang makabuo ng 16 na baraha (kasama ang secret) sa mga kombinasyon. Ang panalong baraha ay ang <b>bounit</b>. Nagbabayad sa nanalo ang bawat kalaban; hindi nagbabayaran ang magkakampi. Dalawang bagay ang nagpapalaki ng bayad: (1) may dalawang baraha sa hawak mo na <b>bagay</b> sa bounit, at (2) may hawak kang kapareho ng sowee at dalawang barahang bagay dito. Bagay ang mga baraha kapag bumubuo sila ng run sa parehong suit; para sa as, kailangan ng dalawa pang as na magkaiba ang suit. Kung galing sa iba ang bounit at hindi natupad ang mga kondisyon, puwedeng bumunot ng hanggang 15 dagdag na baraha para hanapin ang kailangan; hindi na kailangang isama sa kombinasyon ang mga iyon, at walang dagdag na halaga ang king na mabubunot doon.</p>',
     '<table><tr><th>Sitwasyon</th><th>Bayad ng bawat kalaban</th></tr>',
     '<tr><td>Nabunot sa stock ang bounit</td><td>₱1.10 + kings</td></tr>',
     '<tr><td>Galing sa iba ang bounit, natupad ang dalawang kondisyon</td><td>₱1.10 + kings</td></tr>',
@@ -2120,10 +2153,10 @@
     '<tr><td>… kondisyon lang ng sowee</td><td>₱0.70 + kings</td></tr>',
     '<tr><td>… wala sa dalawa</td><td>₱0.20 + kings</td></tr>',
     '<tr><td><b>Porbis</b>: walang king, o isang king sa loob ng sota-caballo-rey</td><td>₱3.00 flat</td></tr></table>',
-    '<p>50 sentimo ang rey de oros at 20 sentimo ang bawat ibang king. Ang bounit na nakuha sa “time” ay parang galing sa iba. Kapag naubos ang stock, tabla ang hand at walang bayad (mananatili ang bayad sa secret).</p>',
+    '<p>Limampung sentimo ang halaga ng rey de oros at dalawampung sentimo ang bawat ibang king. Ang bounit na nakuha sa “time” ay parang galing sa iba. Kapag naubos ang stock, tabla ang hand at walang bayad (mananatili ang bayad sa secret).</p>',
     '<h3>Pag-aayos ng hawak</h3>',
     '<p>I-click ang mga baraha para piliin, tapos pindutin ang <b>I-grupo</b>. May label ang bawat grupo: Set, Run, Kings o Apat na pareho kapag buo na, Kulang 1 kapag isa na lang ang kulang, o Hindi tugma. I-drag ang baraha papasok o palabas ng grupo, i-drag ang grupo sa label nito, o pindutin ang × para buwagin. Inaayos ng <b>Auto-grupo</b> ang buong hawak mo. Para magtapon: pumili ng isang baraha at pindutin ang Itapon, i-double-click, o ihulog sa tapunan.</p>',
-    '<p>May sariling bilis ang mga computer na parang totoong tao; pindutin ang <b>Susunod</b> (o N) kung gusto mong bilisan. Sa Normal, paminsan-minsan silang nagkakamali. Sa Settings mapapalitan ang pangalan, wika, mesa, laki ng baraha, pera, tunog, match at iba pa.</p>',
+    '<p>Naglalaro ang mga computer sa bilis na parang totoong tao; pindutin ang <b>Susunod</b> (o N) kung gusto mong bilisan. Sa Normal, paminsan-minsan silang nagkakamali. Sa Settings mapapalitan ang pangalan, wika, mesa, laki ng baraha, pera, tunog, match at iba pa.</p>',
     '<h3>Makipaglaro</h3>',
     '<p><b>Online</b>: magsimula ng laro at ipadala ang code o link sa hanggang tatlong kaibigan, kahit magkaiba ang network; papalitan nila ang mga computer. May <b>Chat</b> para sa mabilis na mensahe. <b>Sa computer na ito</b>: maghalinhinan sa iisang computer; nakatago ang baraha sa pagitan ng mga turn. Gumagana ang online sa website (' + PAGES_URL + ') at sa na-download na file.</p>',
     '<p>Batay sa mga patakaran ng <a href="https://www.pagat.com/rummy/cuajo.html" target="_blank" rel="noopener">pagat.com: Cuajo</a>.</p>'
@@ -2193,6 +2226,7 @@
     select: id => onCard(id), group: groupSelected, groups: () => Object.assign({}, groupOf), order: () => handOrder.slice(), isDealing: () => dealing,
     setSpeed: v => { settings.speed = v; save(); },
     closeModal, cardEl, skipAhead, waitingOnOthers,
+    tr: x => L(x), log: x => logText(x),
     chat: t => sayChat(t), chatLog: () => chatLog.slice(), stats: () => Object.assign({}, stats), match: () => g.match, newMatch: onNewMatch,
     guests: () => net && net.guests ? Object.values(net.guests).map(x => ({ seat: x.seat, name: x.name, away: x.away, route: x.link ? x.link.kind : null })) : null,
     mode: () => mode, me: () => ME, net: () => net && { role: net.role, code: net.code, ready: net.ready, connected: net.connected, route: net.link ? net.link.kind : null, away: !!net.away, reconnecting: !!net.reconnecting, relayServers: net.relay ? net.relay.servers() : 0, direct: !!net.peer },
