@@ -16,7 +16,7 @@
   const RANK_LABEL = ['Ace', 'Three', 'Four', 'Five', 'Jack', 'Horse', 'King'];
   const RANK_ES = ['As', 'Tres', 'Cuatro', 'Cinco', 'Sota', 'Caballo', 'Rey'];
   const ACE = 0, KING = 6, NTYPES = 28, NCARDS = 112, HAND = 16;
-  const SECRET_PAY = 50; // added to the win price for each secret laid down
+  const SECRET_PAY = 50; // paid by each opponent the moment a secret is laid down
 
   function typeOf(s, r) { return s * 7 + r; }
   function suitOf(t) { return (t / 7) | 0; }
@@ -555,8 +555,9 @@
       h.splice(h.indexOf(extraId), 1); extra = extraId;
     }
     g.secrets[seat].push({ cards, kind: opt.kind, type, extra });
-    // House pricing: a secret is paid with the win (50 each), not when it is laid down.
-    log(g, g.names[seat] + ' lays down a secret' + (opt.kind === 'sowee' ? ' (the three cards matching the sowee, with a fourth card that still has to be melded)' : '') + '.', 'secret');
+    // A secret is paid as soon as it is laid down, whether or not that player goes on to win the hand.
+    for (const p of opponentsOf(seat)) { g.balances[p] -= SECRET_PAY; g.balances[seat] += SECRET_PAY; }
+    log(g, g.names[seat] + ' lays down a secret' + (opt.kind === 'sowee' ? ' (the three cards matching the sowee, with a fourth card that still has to be melded)' : '') + ' and collects ' + money(SECRET_PAY) + ' from each opponent.', 'secret');
     if (mayWin(g, seat) && isComplete(g, seat)) finishWin(g, seat, g.drawnFrom || 'deal', g.drawn, kingWin(g, seat) || undefined);
   }
 
@@ -702,7 +703,6 @@
       { key: 'fourAces', count: count.fourAces, each: PRICE.fourAces },
       { key: 'threeAces', count: count.threeAces, each: PRICE.threeAces },
       { key: 'setOfFour', count: count.setOfFour, each: PRICE.setOfFour },
-      { key: 'secrets', count: g.secrets[seat].length, each: PRICE.secret },
       { key: 'sowee', count: g.sowee != null ? all[cardType(g.sowee)] : 0, each: PRICE.sowee },   // each card identical to the sowee
     ].filter(x => x.count > 0).map(x => Object.assign(x, { amount: x.count * x.each }));
     let per = start; for (const x of items) per += x.amount;

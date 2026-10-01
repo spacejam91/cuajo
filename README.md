@@ -91,7 +91,8 @@ shadows, with a Spanish-style lattice back.
 | Any other win (2 to 6 kings) | 200 |
 
 Plus 5 per king, 5 per 3-4-5 run, 10 per jack-horse-king run, 20 per pong, 5 for three aces, 10 for four aces,
-5 per set of four, 50 per secret and 20 per card identical to the sowee. Secrets are paid with the win.
+5 per set of four and 20 per card identical to the sowee. Each secret is paid 50 by each opponent as soon as it is
+laid down, whether or not that player wins the hand.
 The winning hand is counted in the arrangement worth the most.
 
 ## Taglish

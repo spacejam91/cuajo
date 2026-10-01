@@ -215,12 +215,21 @@ ok(wins + draws === NG, 'every hand ended');
   ok(C.isComplete(gp, 0), 'one-king hand complete');
   pr = C.priceWin(gp, 0, null);
   ok(pr.start === 500 && pr.per === 500 + 5 + 5 + 5 + 5 + 0 + 20, 'one king: 500 + king 5 + runs + three aces + pong = ' + pr.per);
-  // secrets add 50 each with the win; laying one down collects nothing at once
+  // secrets are paid when laid down, so they add nothing to the win price
   gp.hands[0] = ids([T(0,1), T(0,2), T(0,3), T(1,1), T(1,2), T(1,3), T(0,0), T(1,0), T(2,0), T(3,3), T(3,3), T(3,3)]);
   gp.secrets[0] = [{ cards: [T(1,4)*4, T(1,4)*4+1, T(1,4)*4+2, T(1,4)*4+3], kind: 'four', type: T(1,4), extra: null }];
   ok(C.isComplete(gp, 0), 'hand with a secret complete');
   pr = C.priceWin(gp, 0, null);
-  ok(pr.per === 500 + 5 + 5 + 5 + 20 + 50, 'secret adds 50 = ' + pr.per);
+  ok(pr.per === 500 + 5 + 5 + 5 + 20, 'a laid secret is not counted again in the win price = ' + pr.per);
+  // laying a secret down collects 50 from each opponent at once
+  {
+    const gs = C.newGame({ seed: 9, human: -1 }); C.startHand(gs); gs.secrets = [[], [], [], []]; gs.rubWait = [false, false, false, false];
+    gs.hands[0] = ids([T(1,4), T(1,4), T(1,4), T(1,4), T(0,1), T(0,2), T(0,3), T(2,2), T(2,2), T(2,2), T(0,0), T(1,0), T(3,1), T(3,4), T(2,5), T(3,5)]);
+    gs.phase = 'discard'; gs.turn = 0; gs.drawn = null;
+    const before = gs.balances.slice();
+    C.declareSecret(gs, 0, T(1,4), null);
+    ok(gs.balances[0] - before[0] === 2 * C.SECRET_PAY && C.opponentsOf(0).every(p => before[p] - gs.balances[p] === C.SECRET_PAY), 'a secret is paid at once by each opponent');
+  }
   // four kings of the same suit start at 1000
   gp.secrets[0] = [];
   gp.hands[0] = ids([T(1,6), T(1,6), T(1,6), T(1,6), T(0,1), T(0,2), T(0,3), T(2,2), T(2,2), T(2,2), T(0,0), T(1,0), T(3,1), T(3,4), T(2,5)]);
