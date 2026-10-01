@@ -63,12 +63,12 @@
   function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
   function byType(a, b) { return C.cardType(a) - C.cardType(b) || a - b; }
   function name(seat) { const n = g.names[seat]; return settings.lang === 'tl' && n === 'You' ? 'Ikaw' : n; }
-  const YOU_VERB = { draws: 'draw', discards: 'discard', takes: 'take', lets: 'let', lays: 'lay', says: 'say', has: 'have', is: 'are', wins: 'win', deals: 'deal' };
+  const YOU_VERB = { draws: 'draw', discards: 'discard', takes: 'take', lets: 'let', lays: 'lay', says: 'say', has: 'have', is: 'are', wins: 'win', deals: 'deal', holds: 'hold', claims: 'claim' };
   /** Log lines are written as "<name> draws"; when your name is "You" that should read "You draw". */
   function youGrammar(msg) {
     if (name(ME) !== 'You') return msg;
-    let out = msg.replace(/\bYou (draws|discards|takes|lets|lays|says|has|is|wins|deals)\b/g, (m, v) => 'You ' + YOU_VERB[v]);
-    if (/^(Cuajo! )?You /.test(out)) out = out.replace(/ and (claims|shows|collects)\b/g, (m, v) => ' and ' + v.slice(0, -1));
+    let out = msg.replace(/\bYou (draws|discards|takes|lets|lays|says|has|is|wins|deals|holds|claims)\b/g, (m, v) => 'You ' + YOU_VERB[v]);
+    if (/^((Cuajo|Prinsesa|Rub|Seven kings)! )?You /.test(out)) out = out.replace(/ and (claims|shows|collects|wins)\b/g, (m, v) => ' and ' + v.slice(0, -1));
     return out;
   }
 
@@ -86,7 +86,9 @@
   const KAY = n => (isYou(n) ? 'sa iyo' : 'kay ' + n);
   const GROUP = a => { const list = a.replace(/ and /g, ' at '); return (/,| at /.test(list) ? 'sina ' : 'si ') + list; };
   const TL_SEAT = { 'the partner seat': 'kakampi mo', 'the seat on your right': 'nasa kanan mo', 'the seat on your left': 'nasa kaliwa mo' };
-  const TL_SRC = { 'drawn from the stock': 'nabunot sa stock', 'taken from the discard pile': 'kinuha sa tapunan', 'claimed with “time” from another player’s stock draw': 'nakuha sa “time” mula sa bunot ng iba', 'the hand was complete as dealt': 'buo na ang hawak mula pa sa deal' };
+  const TL_SRC = { 'drawn from the stock': 'nabunot sa stock', 'taken from the discard pile': 'kinuha sa tapunan', 'claimed with “time” from another player’s stock draw': 'nakuha sa “time” mula sa bunot ng iba', 'claimed from another player’s shown stock draw': 'kinuha mula sa ipinakitang bunot ng iba', 'the hand was complete as dealt': 'buo na ang hawak mula pa sa deal', 'the kings were dealt to the winner': 'nasa deal pa lang, hawak na ang mga king' };
+  const TL_WIN = w => (w === 'Seven kings' ? '7 kings' : w);
+  const TL_START = { 'four kings of one suit': 'apat na king na pareho ang suit', prinsesa: 'prinsesa', rub: 'rub', 'seven kings': '7 kings', 'no kings': 'walang king', 'only one king': 'iisang king', 'won with the king that finishes a jack-horse-king baksyo': 'nanalo sa king na bumuo ng sota-caballo-rey na baksyo', '2 to 6 kings': '2 hanggang 6 na king' };
   const TL = {
     exact: {
       'Rules': 'Patakaran', 'Settings': 'Settings', 'Play with a friend': 'Makipaglaro', 'Chat': 'Chat', 'Install app': 'I-install', 'Filipino rummy · Spanish deck of 112': 'Filipino rummy · 112 barahang Espanyol',
@@ -94,14 +96,24 @@
       'Stock': 'Stock', 'Discard': 'Tapunan', 'Sowee': 'Sowee', 'Next move': 'Susunod',
       'Sort': 'Ayusin', 'Loose cards by suit, then rank': 'Ayon sa suit, saka sa numero', 'Loose cards by rank, then suit': 'Ayon sa numero, saka sa suit', 'Finished combinations first, then cards one short': 'Unahin ang buo nang kombinasyon, saka ang kulang ng isa', 'Suit': 'Suit', 'Rank': 'Numero', 'Auto-group': 'Auto-grupo', 'Take out of group': 'Alisin sa grupo', 'Ungroup all': 'Alisin ang lahat ng grupo', 'Clear selection': 'Alisin ang pinili',
       'Click more cards to group them.': 'Pumili pa ng baraha para i-grupo.', 'Click cards to select them.': 'I-click ang baraha para piliin.', 'Drag to move them.': 'I-drag para ilipat.', 'Tap cards to select them.': 'I-tap ang baraha para piliin.', 'Press and hold to drag.': 'Pindutin nang matagal para i-drag.', 'Drop a card on the discard pile to discard it.': 'Ihulog ang baraha sa tapunan para itapon.',
-      'Set': 'Set', 'Run': 'Run', 'King': 'King', 'Kings': 'Kings', 'Four alike': 'Apat na pareho', 'Needs 1': 'Kulang ng 1', 'No match': 'Hindi tugma',
+      'Set': 'Set', 'Run': 'Run', 'Pong': 'Pong', 'King': 'King', 'This combination is a baksyo': 'Baksyo ang kombinasyong ito',
+      'Winning card': 'Panalong baraha', 'How it was won': 'Paano nanalo', 'Starting price': 'Panimulang bayad',
+      'Kings': 'Mga king', '3-4-5 runs (baksyo)': 'Run na 3-4-5 (baksyo)', 'Jack-horse-king runs (a king as the baksyo)': 'Run na sota-caballo-rey (king ang baksyo)', 'Pongs': 'Mga pong', 'Four aces': 'Apat na as', 'Three aces': 'Tatlong as', 'Sets of four': 'Set na apat', 'Secrets': 'Mga secret', 'Cards matching the sowee': 'Kapareho ng sowee',
+      'Rub!': 'Rub!', 'Wait for the fourth king': 'Hintayin ang ikaapat na king', 'Win now with the rub': 'Manalo na sa rub', 'Rub! Win now, or wait for the fourth king.': 'Rub! Manalo na, o hintayin ang ikaapat na king.',
+      'You are waiting for the fourth king. You can still win with the rub on your turn.': 'Hinihintay mo ang ikaapat na king. Puwede ka pa ring manalo sa rub sa turn mo.', 'No-king wins': 'Mga panalong walang king',
+      'Full screen': 'Full screen', 'Leave full screen': 'Umalis sa full screen', 'Discards': 'Mga itinapon', 'See all discards': 'Tingnan ang lahat ng itinapon', 'See all the discards': 'Tingnan ang lahat ng itinapon', 'Nothing thrown yet.': 'Wala pang itinatapon.',
+      'Every card thrown this hand, oldest first. Faded cards were picked up by the next player.': 'Lahat ng itinapon sa hand na ito, mula sa pinakauna. Ang malabo ay kinuha ng sumunod na manlalaro.',
+      'Prinsesa!': 'Prinsesa!', 'Rub!': 'Rub!', 'Seven kings!': '7 kings!', 'Special win': 'Espesyal na panalo', 'Special wins pay double': 'Doble ang bayad sa espesyal na panalo',
+      'Prinsesa: one king of every suit and no other kings': 'Prinsesa: isang king sa bawat suit, at wala nang ibang king', 'Rub: three or four kings of the same suit': 'Rub: tatlo o apat na king na pareho ang suit', 'Seven kings: seven kings in one hand': '7 kings: pitong king sa iisang hawak',
+      'Prinsesa, rub and seven kings': 'Prinsesa, rub at 7 kings',
+      'You hold a king, so you need a baksyo to win: three or four aces, or 3-4-5 or jack-horse-king of one suit.': 'May king ka, kaya kailangan mo ng baksyo para manalo: tatlo o apat na as, o 3-4-5 o sota-caballo-rey sa iisang suit.', 'Kings': 'Kings', 'Four alike': 'Apat na pareho', 'Needs 1': 'Kulang ng 1', 'No match': 'Hindi tugma',
       'Cards are hidden so nobody peeks.': 'Nakatago ang mga baraha para walang sumilip.',
       'Your hand is complete.': 'Buo na ang hawak mo.', 'Purro! Any of these completes your hand: ': 'Purro! Alinman dito ang bubuo sa hawak mo: ',
       'Deal': 'Mag-deal', 'New match': 'Bagong match', 'Next hand': 'Susunod na hand', 'Show result': 'Ipakita ang resulta', 'Draw from stock': 'Bumunot sa stock', 'End hand (stock empty)': 'Tapusin ang hand (ubos na ang stock)', 'Cancel secret': 'Huwag nang ilapag ang secret',
       'Discard (select a card)': 'Itapon (pumili ng baraha)', 'Select one card to discard': 'Isang baraha lang ang piliin', 'Kings can’t be discarded': 'Bawal itapon ang king',
       'Four players, partners across the table. Press Deal to start.': 'Apat na manlalaro; magkakampi ang magkaharap. Pindutin ang Mag-deal para magsimula.',
       'The stock ran out. The hand is a draw.': 'Naubos ang stock. Tabla ang hand.', 'The stock is empty and there is nothing to take. End the hand.': 'Ubos na ang stock at walang makukuha. Tapusin ang hand.',
-      'Your turn.': 'Turn mo na.', 'Draw a card from the stock.': 'Bumunot ng baraha sa stock.', 'You dealt, so you discard first.': 'Ikaw ang nag-deal, kaya ikaw ang unang magtatapon.', 'Choose a card to discard.': 'Pumili ng baraha na itatapon.',
+      'Your turn.': 'Turn mo na.', 'The stock is empty, so the hand is a draw. Press End hand.': 'Ubos na ang stock, kaya tabla ang hand. Pindutin ang Tapusin ang hand.', 'Draw a card from the stock.': 'Bumunot ng baraha sa stock.', 'You dealt, so you discard first.': 'Ikaw ang nag-deal, kaya ikaw ang unang magtatapon.', 'Choose a card to discard.': 'Pumili ng baraha na itatapon.',
       'Connection lost. Reconnecting…': 'Naputol ang koneksyon. Kumokonekta ulit…', 'Reconnected.': 'Nakakonekta ulit.',
       'Pick a different card: those three go down together.': 'Ibang baraha ang piliin: sabay na ilalapag ang tatlong iyon.',
       'Cuajo is installed. Open it from your home screen or apps.': 'Naka-install na ang Cuajo. Buksan ito mula sa home screen o apps.',
@@ -150,7 +162,8 @@
       [/^(.+) lets the (.+) go\.$/, (m, a, c) => 'Pinalampas ' + NI(a) + ' ang ' + c + '.'],
       [/^(.+) takes the (.+) from the discard pile\.$/, (m, a, c) => 'Kinuha ' + NI(a) + ' ang ' + c + ' mula sa tapunan.'],
       [/^(.+) lays down a secret \(the three cards matching the sowee, with a fourth card that still has to be melded\) and collects (.+) from each opponent\.$/, (m, a, c) => 'Naglapag ' + ACT(a) + ' ng sowee secret at nakasingil ng ' + c + ' sa bawat kalaban.'],
-      [/^(.+) lays down a secret and collects (.+) from each opponent\.$/, (m, a, c) => 'Naglapag ' + ACT(a) + ' ng secret at nakasingil ng ' + c + ' sa bawat kalaban.'],
+      [/^(.+) lays down a secret\.$/, (m, a) => 'Naglapag ' + ACT(a) + ' ng secret.'],
+      [/^(.+) lays down a secret \(the three cards matching the sowee, with a fourth card that still has to be melded\)\.$/, (m, a) => 'Naglapag ' + ACT(a) + ' ng sowee secret.'],
       [/^(.+) discards the (.+)\.$/, (m, a, c) => 'Itinapon ' + NI(a) + ' ang ' + c + '.'],
       [/^(.+) has served the two turns after the broken purro and plays normally again\.$/, (m, a) => 'Tapos na ang parusa ' + (isYou(a) ? 'mo' : 'ni ' + a) + ' dahil sa nasirang purro; normal na ulit ang laro ' + HIS(a) + '.'],
       [/^(.+) says "purro" — one card away from winning!$/, (m, a) => '“Purro!” sabi ' + NI(a) + '. Isang baraha na lang ang kulang ' + HIS(a) + '.'],
@@ -158,16 +171,20 @@
       [/^The stock is exhausted: the hand is a draw and nobody pays\.$/, 'Ubos na ang stock: tabla ang hand at walang magbabayad.'],
       [/^Cuajo! (.+) wins and collects (.+) from each opponent after drawing (\d+) extra cards? from the stock\.$/, (m, a, c, n) => 'Cuajo! Nanalo ' + ACT(a) + ' at nakasingil ng ' + c + ' sa bawat kalaban, matapos bumunot ng ' + n + ' dagdag na baraha sa stock.'],
       [/^Cuajo! (.+) wins and collects (.+) from each opponent\.$/, (m, a, c) => 'Cuajo! Nanalo ' + ACT(a) + ' at nakasingil ng ' + c + ' sa bawat kalaban.'],
+      [/^Prinsesa! (.+) holds one king of every suit and no other kings and wins, collecting (.+) from each opponent\.$/, (m, a, c) => 'Prinsesa! May isang king ' + (isYou(a) ? 'ka' : 'si ' + a) + ' sa bawat suit, at panalo ' + (isYou(a) ? 'ka' : 'siya') + ': ' + c + ' mula sa bawat kalaban.'],
+      [/^Rub! (.+) holds (three|four) kings of the same suit and wins, collecting (.+) from each opponent\.$/, (m, a, n, c) => 'Rub! May ' + (n === 'four' ? 'apat na' : 'tatlong') + ' king ' + (isYou(a) ? 'ka' : 'si ' + a) + ' na pareho ang suit, at panalo ' + (isYou(a) ? 'ka' : 'siya') + ': ' + c + ' mula sa bawat kalaban.'],
+      [/^Seven kings! (.+) holds seven kings and wins, collecting (.+) from each opponent\.$/, (m, a, c) => '7 kings! May pitong king ' + (isYou(a) ? 'ka' : 'si ' + a) + ', at panalo ' + (isYou(a) ? 'ka' : 'siya') + ': ' + c + ' mula sa bawat kalaban.'],
+      [/^(.+) claims the shown (.+) for a rub\.$/, (m, a, c) => 'Kinuha ' + NI(a) + ' ang ipinakitang ' + c + ' para sa rub.'],
       // status line
       [/^(.+) deal the cards…$/, (m, a) => cap(SI(a)) + ' ang nagde-deal…'], [/^(.+) is dealing…$/, (m, a) => cap(SI(a)) + ' ang nagde-deal…'],
       [/^Pass the computer to (.+)\.$/, (m, a) => 'Ibigay ang computer ' + KAY(a) + '.'],
-      [/^Cuajo! (.+) wins the hand\.$/, (m, a) => 'Cuajo! ' + cap(SI(a)) + ' ang panalo sa hand na ito.'],
+      [/^(Cuajo|Prinsesa|Rub|Seven kings)! (.+) wins the hand\.$/, (m, w, a) => TL_WIN(w) + '! ' + cap(SI(a)) + ' ang panalo sa hand na ito.'],
       [/^Time! You can claim the (.+)\.$/, 'Time! Puwede mong kunin ang $1.'],
       [/^(.+) is looking at the shown card…$/, (m, a) => 'Tinitingnan ' + NI(a) + ' ang ipinakitang baraha…'],
       [/^(.+) is drawing…$/, (m, a) => 'Bumubunot ' + ACT(a) + '…'], [/^(.+) is choosing a discard…$/, (m, a) => 'Pumipili ' + ACT(a) + ' ng itatapon…'],
       [/^The stock is empty, but the (.+) completes your hand: take it to win, or end the hand\.$/, 'Ubos na ang stock, pero bubuo sa hawak mo ang $1: kunin ito para manalo, o tapusin ang hand.'],
       [/^The stock is empty and the (.+) does not complete your hand\. End the hand\.$/, 'Ubos na ang stock at hindi bubuo sa hawak mo ang $1. Tapusin ang hand.'],
-      [/^The (.+) completes your hand! Take it to win\.$/, 'Bubuo sa hawak mo ang $1! Kunin ito para manalo.'],
+      [/^The (.+) would complete your hand, but a winning card has to come from the stock\. Draw from the stock\.$/, 'Bubuo sana sa hawak mo ang $1, pero sa stock lang dapat manggaling ang panalong baraha. Bumunot sa stock.'],
       [/^Draw from the stock, or take the (.+) from the discard pile\.$/, 'Bumunot sa stock, o kunin ang $1 mula sa tapunan.'],
       [/^Your purro was broken: this draw is shown and you cannot win for (\d+) more turns?\.$/, 'Nasira ang purro mo: ipapakita ang bunot na ito, at hindi ka puwedeng manalo sa susunod na $1 turn.'],
       [/^Choose any fourth card from your hand to lay down with your three (.+) cards\.$/, 'Pumili ng ikaapat na baraha na ilalapag kasama ng tatlong $1.'],
@@ -192,12 +209,17 @@
       [/^Show (.+)’s cards$/, (m, a) => (isYou(a) ? 'Ipakita ang baraha mo' : 'Ipakita ang baraha ni ' + a)],
       [/^(\d+) cards?$/, '$1 baraha'], [/^broken purro: (\d+) turns? left$/, 'sirang purro: $1 turn pa'], [/^(\d+) combinations$/, '$1 kombinasyon'],
       // result dialog
-      [/^Cuajo! (.+) \(your partner\) wins the hand$/, 'Cuajo! Panalo ang kakampi mong si $1'], [/^Cuajo! (.+) wins the hand$/, (m, a) => (isYou(a) ? 'Cuajo! Panalo ka' : 'Cuajo! Panalo si ' + a)],
+      [/^(Prinsesa|Rub|Seven kings)! You win the hand$/, (m, w) => TL_WIN(w) + '! Panalo ka sa hand na ito'],
+      [/^(Cuajo|Prinsesa|Rub|Seven kings)! (.+) \(your partner\) wins the hand$/, (m, w, a) => TL_WIN(w) + '! Panalo ang kakampi mong si ' + a], [/^(Cuajo|Prinsesa|Rub|Seven kings)! (.+) wins the hand$/, (m, w, a) => (isYou(a) ? TL_WIN(w) + '! Panalo ka' : TL_WIN(w) + '! Panalo si ' + a)],
       [/^Nobody completed a hand before the stock ran out, so the hand is a draw and nobody pays \(secrets already paid stand\)\. (.+) deals again\.$/, (m, a) => 'Walang nakabuo bago naubos ang stock, kaya tabla ang hand at walang magbabayad (mananatili ang bayad sa mga secret). ' + cap(SI(a)) + ' ulit ang magde-deal.'],
       [/^The conditions were not met from the hand, so (\d+) extra cards? (?:was|were) drawn \(up to 15 allowed\) until both conditions held\.$/, 'Hindi natupad ang mga kondisyon mula sa hawak, kaya bumunot ng $1 dagdag na baraha (hanggang 15 ang puwede) hanggang matupad ang dalawa.'],
       [/^The conditions were not met from the hand, so (\d+) extra cards? (?:was|were) drawn \(up to 15 allowed\) without meeting both conditions\.$/, 'Hindi natupad ang mga kondisyon mula sa hawak, kaya bumunot ng $1 dagdag na baraha (hanggang 15 ang puwede), pero hindi pa rin natupad ang dalawa.'],
-      [/^(.+) — (drawn from the stock|taken from the discard pile|claimed with “time” from another player’s stock draw|the hand was complete as dealt)$/, (m, a, b) => a + ' — ' + TL_SRC[b]],
-      [/^(drawn from the stock|taken from the discard pile|claimed with “time” from another player’s stock draw|the hand was complete as dealt)$/, (m, a) => TL_SRC[a]],
+      [/^(.+) — (drawn from the stock|taken from the discard pile|claimed with “time” from another player’s stock draw|claimed from another player’s shown stock draw|the hand was complete as dealt|the kings were dealt to the winner)$/, (m, a, b) => a + ' — ' + TL_SRC[b]],
+      [/^(drawn from the stock|taken from the discard pile|claimed with “time” from another player’s stock draw|claimed from another player’s shown stock draw|the hand was complete as dealt|the kings were dealt to the winner)$/, (m, a) => TL_SRC[a]],
+      [/^(.+) \((four kings of one suit|prinsesa|rub|seven kings|no kings|only one king|won with the king that finishes a jack-horse-king baksyo|2 to 6 kings)\)$/, (m, a, b) => a + ' (' + TL_START[b] + ')'],
+      [/^(.+) · (\d+) cards?$/, '$1 · $2 baraha'], [/^(.+) · taken by (.+)$/, (m, c, a) => c + ' · kinuha ' + NI(a)],
+      [/^(.+) is looking at their cards…$/, (m, a) => 'Tinitingnan ' + NI(a) + ' ang baraha ' + HIS(a) + '…'],
+      [/^You were dealt three (.+) cards\. Win now with the rub, or keep playing and wait for the fourth: four kings of one suit start at (.+) instead of (.+)\. While you wait you can still take the rub on any of your turns, but if someone else wins first, it is gone\.$/, 'Tatlong $1 ang na-deal sa iyo. Manalo na sa rub, o ituloy ang laro at hintayin ang ikaapat: $2 ang panimula ng apat na king na pareho ang suit, sa halip na $3. Habang naghihintay, puwede mo pa ring kunin ang rub sa alinmang turn mo, pero kapag may ibang nanalo muna, wala na ito.'], [/^(Set|Run|Pong|Four alike) · baksyo$/, (m, a) => (a === 'Four alike' ? 'Apat na pareho' : a) + ' · baksyo'],
       [/^(\d+) \(worth (.+)\)$/, '$1 (halagang $2)'], [/^no kings, or one king inside its jack-horse-king run: a flat (.+)$/, 'walang king, o may isang king sa loob ng sota-caballo-rey: flat na $1'],
       [/^(.+) \(partners do not pay each other\)$/, '$1 (hindi nagbabayaran ang magkakampi)'], [/^(.+) \(the winner deals\)$/, '$1 (ang panalo ang magde-deal)'], [/^(.+) \(the deal passes to the right\)$/, '$1 (lilipat ang deal sa kanan)'],
       [/^(.+) drew the (.+) from the stock and showed it because you are purro\. It completes your hand: say “time” to claim it and win\.$/, (m, a, c) => 'Nakabunot ' + ACT(a) + ' ng ' + c + ' mula sa stock at ipinakita ' + HIS(a) + ' ito dahil naka-purro ka. Bubuo ito sa hawak mo: sabihin ang “time” para kunin ito at manalo.'],
@@ -215,22 +237,33 @@
   };
   const CARD_EN = /\b(Ace|Three|Four|Five|Jack|Horse|King) of (Coins|Cups|Swords|Batons)\b/g;
   const RANK_IX = { Ace: 0, Three: 1, Four: 2, Five: 3, Jack: 4, Horse: 5, King: 6 }, SUIT_IX = { Coins: 0, Cups: 1, Swords: 2, Batons: 3 };
+  // The family's own words: bunutan (stock), panugse (discards), alas, atlu, apat, lima, sota, kabayo, hari; orus, kopas, espada, bastus.
+  const RANK_TL = ['Alas', 'Atlu', 'Apat', 'Lima', 'Sota', 'Kabayo', 'Hari'], SUIT_TL = ['Orus', 'Kopas', 'Espada', 'Bastus'];
+  const linker = w => (/[aeiou]$/i.test(w) ? w + 'ng' : w + ' a');   // Sotang Orus, Limang Bastus; Alas a Orus, Apat a Kopas
+  function tlCard(r, su) { return linker(RANK_TL[r]) + ' ' + SUIT_TL[su]; }
+  const TL_VOCAB = [[/\b7 kings\b/g, '\u00a7'], [/\bStock\b/g, 'Bunutan'], [/\bstock\b/g, 'bunutan'], [/\bTapunan\b/g, 'Panugse'], [/\btapunan\b/g, 'panugse'],
+    [/\bKings?\b/g, 'Hari'], [/\bkings?\b/g, 'hari'], [/\bas\b/g, 'alas'], [/\bcaballo\b/g, 'kabayo'], [/\brey\b/g, 'hari'], [/\boros\b/g, 'orus'], [/\bcopas\b/g, 'kopas'],
+    [/\bespadas\b/g, 'espada'], [/\bbastos\b/g, 'bastus'], [/\btres\b/g, 'atlu'], [/\bcuatro\b/g, 'apat'], [/\bcinco\b/g, 'lima'], [/\u00a7/g, '7 kings']];
+  function tlVocab(x) { for (const [re, w] of TL_VOCAB) x = x.replace(re, w); return x; }
+  function cardsTL(x) { return x.replace(CARD_EN, (m, r, su) => tlCard(RANK_IX[r], SUIT_IX[su])); }
   function trOne(s) {
     if (Object.prototype.hasOwnProperty.call(TL.exact, s)) return TL.exact[s];
     for (const [re, rep] of TL.patterns) if (re.test(s)) return s.replace(re, rep);
-    return s;
+    return null;
   }
   function L(s) {
     if (settings.lang !== 'tl' || typeof s !== 'string' || !s.trim()) return s;
-    let out = trOne(s);
-    if (out === s) {                                   // a few sentences in a row: translate each
-      const parts = s.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g);
-      if (parts && parts.length > 1) { const tp = parts.map(p => trOne(p.trim())); if (tp.some((x, i) => x !== parts[i].trim())) out = tp.join(' '); }
+    const one = trOne(s);
+    if (one != null) return tlVocab(cardsTL(one));
+    const parts = s.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g);      // a few sentences in a row: translate each
+    if (parts && parts.length > 1) {
+      const tp = parts.map(p => trOne(p.trim()));
+      if (tp.some(x => x != null)) return tp.map((x, i) => (x != null ? tlVocab(cardsTL(x)) : cardsTL(parts[i].trim()))).join(' ');
     }
-    return out.replace(CARD_EN, (m, r, su) => C.RANK_ES[RANK_IX[r]] + ' de ' + C.SUIT_ES[SUIT_IX[su]]);
+    return cardsTL(s);
   }
-  /** Card names: English, or the Spanish names used at Filipino card tables. */
-  function cn(t) { return settings.lang === 'tl' ? C.RANK_ES[C.rankOf(t)] + ' de ' + C.SUIT_ES[C.suitOf(t)] : C.cardName(t); }
+  /** Card names: English, or the names used at the family table (Sotang Orus, Haring Kopas, Apat a Espada). */
+  function cn(t) { return settings.lang === 'tl' ? tlCard(C.rankOf(t), C.suitOf(t)) : C.cardName(t); }
   function logText(msg) { return settings.lang === 'tl' ? L(msg).replace(/\bYou\b/g, 'Ikaw') : youGrammar(msg); }
 
   // ---------- cards ----------
@@ -401,6 +434,7 @@
     if (!g || dealing) return false;
     if ((g.phase === 'draw' || g.phase === 'discard') && !isHuman(g.turn)) return true;
     if (g.phase === 'timeOffer') return !isHuman(C.currentClaimant(g));
+    if (g.phase === 'rubOffer') return !isHuman(g.rubOffer.seat);
     return g.phase === 'over' && !resultShown && !modal;
   }
   /** Next move: skip the thinking pause. The cards still move across the table; the deal always plays in full. */
@@ -465,12 +499,14 @@
     bubbleOnly(seat, text, msec);
   }
   function bubbleOnly(seat, text, msec, sound) {
-    sfx(sound || { 'Purro!': 'purro', 'Cuajo!': 'win', 'Time!': 'time', 'Secret!': 'secret' }[text] || 'turn');
+    sfx(sound || { 'Purro!': 'purro', 'Cuajo!': 'win', 'Prinsesa!': 'win', 'Rub!': 'win', 'Seven kings!': 'win', 'Time!': 'time', 'Secret!': 'secret' }[text] || 'turn');
     const id = ((bubbles[seat] && bubbles[seat].id) || 0) + 1;
     bubbles[seat] = { text, id };
     render();
     setTimeout(() => { if (bubbles[seat] && bubbles[seat].id === id) { delete bubbles[seat]; render(); } }, Math.max(msec || 0, 900));
   }
+  const SPECIAL = { prinsesa: 'Prinsesa', sevenkings: 'Seven kings', rub: 'Rub' };
+  function winWord(r) { return r && r.special ? SPECIAL[r.special] : 'Cuajo'; }
   function snap() { return { purro: g.purro.slice(), secrets: g.secrets.map(x => x.length), phase: g.phase }; }
   /** Speech bubbles for what just happened; returns how long to pause so people can see it. */
   function announce(b) {
@@ -479,7 +515,7 @@
       if (g.secrets[s].length > b.secrets[s]) { showBubble(s, 'Secret!', secs(1600)); extra = Math.max(extra, secs(800)); }
       if (!b.purro[s] && g.purro[s]) { showBubble(s, 'Purro!', secs(1900)); extra = Math.max(extra, secs(900)); }
     }
-    if (b.phase !== 'over' && g.phase === 'over' && g.result && g.result.type === 'win') showBubble(g.result.winner, 'Cuajo!', secs(2800) || 1200);
+    if (b.phase !== 'over' && g.phase === 'over' && g.result && g.result.type === 'win') showBubble(g.result.winner, winWord(g.result) + '!', secs(2800) || 1200);
     return extra;
   }
 
@@ -534,6 +570,14 @@
     if (mode === 'guest') {   // the host runs the game; this computer only answers when it is our call
       if (g.phase === 'timeOffer' && C.currentClaimant(g) === ME) { if (modal !== 'time') { modal = 'time'; render(); } }
       else if (modal === 'time') { modal = null; render(); }
+      if (g.phase === 'rubOffer' && g.rubOffer && g.rubOffer.seat === ME) { if (modal !== 'rub') { modal = 'rub'; render(); } }
+      else if (modal === 'rub') { modal = null; render(); }
+      return;
+    }
+    if (g.phase === 'rubOffer') {
+      const p = g.rubOffer.seat;
+      if (isHuman(p)) { if (isLocalHuman(p) && !needPrompt(p) && modal !== 'rub') { modal = 'rub'; render(); } return; }
+      later(() => { const my = gen; if (g.phase !== 'rubOffer') return; const r = act(p, 'rub', C.aiChooseRub(g, p)); announce(r.b); save(); render(); if (my === gen) drive(); }, secs(900, 500));
       return;
     }
     if (g.phase === 'timeOffer') {
@@ -561,11 +605,13 @@
     const b = snap();
     let move = null, from = null;
     if (a === 'drawStock') { from = rectOf('.pile.stock .card'); C.drawStock(g, seat); move = { kind: 'draw', seat, src: 'stock', id: g.drawn, shown: !!(g.lastShown && g.lastShown.id === g.drawn) }; }
-    else if (a === 'takeDiscard') { from = rectOf('.pile.discard .card'); C.takeDiscard(g, seat); move = { kind: 'draw', seat, src: 'discard', id: g.drawn, shown: true }; }
+    else if (a === 'takeDiscard') { from = discardRect(topDiscardSeat()); C.takeDiscard(g, seat); move = { kind: 'draw', seat, src: 'discard', id: g.drawn, shown: true }; }
     else if (a === 'discard') { from = noFly ? null : cardRect(seat, arg); C.discard(g, seat, arg); move = { kind: 'discard', seat, id: arg }; }
     else if (a === 'secret') C.declareSecret(g, seat, arg.type, arg.extraId == null ? null : arg.extraId);
     else if (a === 'time') { const o = g.timeOffer; from = seatTarget(o.from).rect; C.resolveTime(g, !!arg); if (arg) move = { kind: 'time', seat, from: o.from, id: o.card }; }
     else if (a === 'endHand') C.endHandDraw(g);
+    else if (a === 'rub') C.resolveRub(g, !!arg);
+    else if (a === 'rubNow') C.declareRub(g, seat);
     if (seat === ME) { if (a === 'discard') selIds = selIds.filter(x => x !== arg); else if (a !== 'time') selIds = []; }
     if (a === 'discard' && mode === 'local' && seat === ME) handHidden = true;   // pass-and-play: cover your cards once your turn is over
     lastMove = move; save(); render();
@@ -581,7 +627,7 @@
       return p.then(dest.show);
     }
     if (move.kind === 'discard') {
-      const top = $('.pile.discard .card');
+      const top = discardTopEl(move.seat);
       if (!top) return Promise.resolve();
       top.style.visibility = 'hidden';
       return fly(from, top.getBoundingClientRect(), C.cardType(move.id), secs(move.seat === ME ? 380 : 480)).then(() => { top.style.visibility = ''; });
@@ -658,6 +704,10 @@
     if (opt.kind === 'four') { selIds = []; humanAct('secret', { type: opt.type, extraId: null }); }
     else { pickExtra = opt.type; selIds = []; render(); }
   }
+  function onRub(win) {
+    if (g.phase === 'rubOffer' && g.rubOffer && g.rubOffer.seat === ME && isLocalHuman(ME)) { modal = null; humanAct('rub', win); render(); }
+  }
+  function onDeclareRub() { if (C.legalActions(g, ME).declareRub && isLocalHuman(ME) && !covered()) humanAct('rubNow'); }
   function onTime(accept) {
     if (g.phase === 'timeOffer' && C.currentClaimant(g) === ME && isLocalHuman(ME)) { modal = null; humanAct('time', accept); render(); }
   }
@@ -698,6 +748,7 @@
     $('#btn-rules').textContent = L('Rules'); $('#btn-settings').textContent = L('Settings');
     const sub = $('.brand .sub'); if (sub) sub.textContent = L('Filipino rummy \u00b7 Spanish deck of 112');
     const ib = $('#btn-install'); if (ib) { ib.hidden = !installPrompt || standaloneApp(); ib.textContent = L('Install app'); }
+    const fb2 = $('#btn-full'); if (fb2) { fb2.hidden = !canFullscreen(); const on = !!fullscreenEl(); fb2.title = L(on ? 'Leave full screen' : 'Full screen'); fb2.setAttribute('aria-label', fb2.title); fb2.classList.toggle('on', on); }
     if (g.match && g.phase !== 'idle') sc.append(el('span', 'sc match', matchProgress()));
     for (const seat of [ME, C.partnerOf(ME), (ME + 1) % 4, (ME + 3) % 4]) {
       const us = seat % 2 === ME % 2, chip = el('span', 'sc');
@@ -710,6 +761,7 @@
   function isActive(seat) {
     if (g.phase === 'idle' || g.phase === 'over' || dealing) return false;
     if (g.phase === 'timeOffer') return C.currentClaimant(g) === seat;
+    if (g.phase === 'rubOffer') return g.rubOffer.seat === seat;
     return g.turn === seat;
   }
 
@@ -753,25 +805,26 @@
     if (g.phase === 'idle') { add('Four players, partners across the table. Press Deal to start.'); return st; }
     if (dealing) { add(name(g.dealer) + (g.dealer === ME ? ' deal the cards\u2026' : ' is dealing\u2026')); return st; }
     if (mode === 'local' && promptSeat != null && g.phase !== 'over') { add('Pass the computer to ' + name(promptSeat) + '.'); return st; }
-    if (g.phase === 'over') { add(g.result.type === 'draw' ? 'The stock ran out. The hand is a draw.' : 'Cuajo! ' + name(g.result.winner) + ' wins the hand.'); return st; }
+    if (g.phase === 'over') { add(g.result.type === 'draw' ? 'The stock ran out. The hand is a draw.' : winWord(g.result) + '! ' + name(g.result.winner) + ' wins the hand.'); return st; }
+    if (g.phase === 'rubOffer') {
+      const p = g.rubOffer.seat;
+      add(p === ME ? 'Rub! Win now, or wait for the fourth king.' : name(p) + ' is looking at their cards…');
+      return st;
+    }
     if (g.phase === 'timeOffer') {
       const p = C.currentClaimant(g);
       add(p === ME ? 'Time! You can claim the ' + cn(C.cardType(g.timeOffer.card)) + '.' : name(p) + ' is looking at the shown card…');
       return st;
     }
     if (g.turn !== ME) { add(name(g.turn) + (g.phase === 'draw' ? ' is drawing…' : ' is choosing a discard…')); return st; }
+    if (g.rubWait && g.rubWait[ME]) add('You are waiting for the fourth king. You can still win with the rub on your turn. ');
     const top = C.topDiscard(g);
     if (g.phase === 'draw') {
       const la = C.legalActions(g, ME);
       const pen = g.penalty[ME] > 0 ? ' Your purro was broken: this draw is shown and you cannot win for ' + plural(g.penalty[ME], 'more turn') + '.' : '';
-      if (!g.stock.length) {
-        if (top == null) add('The stock is empty and there is nothing to take. End the hand.');
-        else if (la.takeDiscard) add('The stock is empty, but the ' + cn(C.cardType(top)) + ' completes your hand: take it to win, or end the hand.', 'strong');
-        else add('The stock is empty and the ' + cn(C.cardType(top)) + ' does not complete your hand. End the hand.');
-        return st;
-      }
+      if (!g.stock.length) { add('The stock is empty, so the hand is a draw. Press End hand.'); return st; }
       if (top == null) { add('Your turn. Draw a card from the stock.' + pen); return st; }
-      if (la.takeDiscard && completesMe(C.cardType(top)) && g.penalty[ME] === 0) { add('The ' + cn(C.cardType(top)) + ' completes your hand! Take it to win.', 'strong'); return st; }
+      if (completesMe(C.cardType(top))) { add('The ' + cn(C.cardType(top)) + ' would complete your hand, but a winning card has to come from the stock. Draw from the stock.' + pen); return st; }
       add('Your turn. Draw from the stock, or take the ' + cn(C.cardType(top)) + ' from the discard pile.' + pen);
       return st;
     }
@@ -782,6 +835,75 @@
   }
   function completesMe(t) { return C.completesWith(g, ME, t); }
 
+  // Each player's discards sit between them and the next player to the right, who may take the top card.
+  const CORNER = ['se', 'ne', 'nw', 'sw'];
+  function topDiscardSeat() { return g.discardedBy && g.discardedBy.length ? g.discardedBy[g.discardedBy.length - 1] : null; }
+  function discardTopEl(seat) { return document.querySelector('.pile.discard[data-seat="' + seat + '"] .card.top'); }
+  function discardRect(seat) {
+    if (seat == null) return null;
+    const n = discardTopEl(seat); if (n) return n.getBoundingClientRect();
+    const p = document.querySelector('.pile.discard[data-seat="' + seat + '"] .dstack'); return p ? p.getBoundingClientRect() : null;
+  }
+  function openDiscards(seat) { discardFocus = seat; modal = 'discards'; render(); }
+  function renderDiscardSpots(canTake) {
+    const topSeat = topDiscardSeat();
+    for (let k = 0; k < 4; k++) {
+      const seat = (ME + k) % 4, spot = $('.dspot.d-' + CORNER[k]);
+      if (!spot) continue;
+      spot.innerHTML = '';
+      if (g.phase === 'idle') continue;
+      const list = (g.history || []).filter(h => h.seat === seat && h.takenBy == null);
+      const takeHere = canTake && topSeat === seat;
+      const pd = el('div', 'pile discard' + (seat === ME ? ' mine' : '') + (takeHere ? ' clickable' : ''));
+      pd.dataset.seat = seat;
+      const stack = el('div', 'dstack');
+      const show = list.slice(-3);
+      if (!show.length) stack.append(el('div', 'slot'));
+      show.forEach((h, i) => { const cd = cardEl(h.type); if (i === show.length - 1) cd.classList.add('top'); stack.append(cd); });
+      pd.append(stack);
+      if (list.length) pd.append(el('span', 'cnt', String(list.length)));
+      const lb = el('button', 'dlbl', name(seat)); lb.type = 'button'; lb.dataset.key = 'dlbl-' + seat;
+      lb.title = L('See all the discards'); lb.setAttribute('aria-label', L('See all the discards'));
+      lb.addEventListener('click', () => openDiscards(seat));
+      pd.append(lb);
+      const top = stack.querySelector('.card.top');
+      const onKey = fn => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
+      if (takeHere && top) {
+        top.setAttribute('role', 'button'); top.setAttribute('aria-label', L('Take the ' + cn(top.dataset.t != null ? +top.dataset.t : list[list.length - 1].type) + ' from the discard pile'));
+        top.dataset.key = 'discard'; top.tabIndex = 0; top.addEventListener('click', onTake); top.addEventListener('keydown', onKey(onTake));
+        for (const c of stack.querySelectorAll('.card:not(.top)')) c.addEventListener('click', () => openDiscards(seat));
+      } else {
+        stack.setAttribute('role', 'button'); stack.tabIndex = 0; stack.dataset.key = 'dstack-' + seat;
+        stack.setAttribute('aria-label', L('See all the discards'));
+        stack.addEventListener('click', () => openDiscards(seat)); stack.addEventListener('keydown', onKey(() => openDiscards(seat)));
+      }
+      spot.append(pd);
+    }
+  }
+  /** Every card thrown this hand, player by player, oldest first; picked-up cards are faded. */
+  function discardsBox() {
+    const box = el('div', 'box discards-box');
+    box.append(el('h2', null, 'Discards'));
+    box.append(el('p', 'note', 'Every card thrown this hand, oldest first. Faded cards were picked up by the next player.'));
+    const hist = g.history || [], last = hist.length ? hist[hist.length - 1] : null;
+    for (let k = 0; k < 4; k++) {
+      const seat = (ME + k) % 4, list = hist.filter(h => h.seat === seat);
+      const sec = el('section', 'dgroup' + (seat === discardFocus ? ' focus' : ''));
+      sec.append(el('h3', null, name(seat) + ' \u00b7 ' + plural(list.length, 'card')));
+      const row = el('div', 'drow');
+      if (!list.length) row.append(el('span', 'note', 'Nothing thrown yet.'));
+      for (const h of list) {
+        const c = cardEl(h.type, { mini: true });
+        if (h.takenBy != null) { c.classList.add('taken'); c.title = L(cn(h.type) + ' \u00b7 taken by ' + name(h.takenBy)); }
+        if (h === last) c.classList.add('latest');
+        row.append(c);
+      }
+      sec.append(row);
+      box.append(sec);
+    }
+    box.append(barWith(btn('Close', closeModal, 'primary')));
+    return box;
+  }
   function renderCenter() {
     const piles = $('.piles'); piles.innerHTML = '';
     const mine = myTurn('draw');
@@ -793,20 +915,11 @@
     } else ps.append(el('div', 'slot'));
     if (g.phase !== 'idle') ps.append(el('span', 'cnt', String(g.stock.length)));
     ps.append(el('span', 'lbl', 'Stock'));
-    const top = C.topDiscard(g);
-    const canTake = mine && C.legalActions(g, ME).takeDiscard;
-    const pd = el('div', 'pile discard' + (canTake ? ' clickable' : '') + (canTake && completesMe(C.cardType(top)) && g.penalty[ME] === 0 ? ' wins' : ''));
-    if (top != null) {
-      const cd = cardEl(C.cardType(top));
-      if (canTake) { cd.setAttribute('role', 'button'); cd.setAttribute('aria-label', 'Take the ' + cn(C.cardType(top)) + ' from the discard pile'); cd.dataset.key = 'discard'; cd.tabIndex = 0; cd.addEventListener('click', onTake); cd.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTake(); } }); }
-      pd.append(cd);
-    } else pd.append(el('div', 'slot'));
-    if (g.phase !== 'idle') pd.append(el('span', 'cnt', String(g.discards.length)));
-    pd.append(el('span', 'lbl', 'Discard'));
     const pw = el('div', 'pile sowee');
     pw.append(g.sowee != null && g.phase !== 'idle' ? cardEl(C.cardType(g.sowee)) : el('div', 'slot'));
     pw.append(el('span', 'lbl', 'Sowee'));
-    piles.append(ps, pd, pw);
+    piles.append(ps, pw);
+    renderDiscardSpots(mine && C.legalActions(g, ME).takeDiscard);
 
     const status = $('.status'); status.innerHTML = ''; status.append(statusText());
     const cb = $('#center-bar'); cb.innerHTML = '';
@@ -816,6 +929,7 @@
       nb.title = 'Skip the pause. The cards still move, you just wait less. Shortcut: N';
       cb.append(nb);
     }
+    if (g.phase !== 'idle' && !dealing && (g.history || []).length) cb.append(btn('See all discards', () => openDiscards(null), 'link'));
     const log = $('.log'); log.innerHTML = '';
     const recent = g.events.slice(-5).reverse();
     for (const e of recent) {
@@ -834,9 +948,10 @@
   }
   /** Groups your hand the way the hint planner sees it: finished combinations, kings, then cards one short. */
   function autoGroupOrder() {
-    const pri = { set: 0, run: 0, secret: 0, king: 1, secret3: 2, set2: 2, run2: 2, secret2: 2, seed: 3, drop: 4 };
-    const plan = C.keepPlan(C.poolCounts(g, ME), C.slotsFor(g, ME)).map((gp, i) => ({ gp, i }));
-    plan.sort((x, y) => (pri[x.gp.kind] - pri[y.gp.kind]) || x.i - y.i);
+    const pri = { set: 0, run: 0, pong: 0, secret: 0, king: 1, secret3: 2, set2: 2, run2: 2, pong2: 2, secret2: 2, seed: 3, drop: 4 };
+    const plan = C.planFor(g, ME).map((gp, i) => ({ gp, i }));
+    const pr = k => (pri[k] == null ? 3 : pri[k]);
+    plan.sort((x, y) => (pr(x.gp.kind) - pr(y.gp.kind)) || (y.gp.baksyo ? 1 : 0) - (x.gp.baksyo ? 1 : 0) || x.i - y.i);
     const left = g.hands[ME].slice().sort(byType), out = [], kings = [];
     let finished = 0;
     groupOf = {};
@@ -892,7 +1007,10 @@
     if (C.canPartition(c)) {
       const parts = C.partition(c) || [];
       if (parts.every(x => x.kind === 'king')) return { cls: 'ok', text: parts.length === 1 ? 'King' : 'Kings' };
-      if (parts.length === 1) return { cls: 'ok', text: { set: 'Set', run: 'Run', secret: 'Four alike' }[parts[0].kind] || 'Combination' };
+      if (parts.length === 1) {
+        const text = { set: 'Set', run: 'Run', pong: 'Pong', secret: 'Four alike' }[parts[0].kind] || 'Combination';
+        return C.isBaksyo(parts[0].types) ? { cls: 'ok baksyo', text: text + ' \u00b7 baksyo', title: 'This combination is a baksyo' } : { cls: 'ok', text };
+      }
       return { cls: 'ok', text: parts.length + ' combinations' };
     }
     if (oneShort(c)) return { cls: 'part', text: 'Needs 1', title: 'One more card makes this a combination' };
@@ -975,7 +1093,7 @@
     d.ghost = ghost;
     d.el.classList.add('placeholder');
     document.body.classList.add('dragging');
-    const pile = document.querySelector('.pile.discard');
+    const pile = document.querySelector('.pile.discard.mine');
     if (pile && canDropOnDiscard(d)) pile.classList.add('drop-target');
     moveDrag(x, y);
   }
@@ -984,7 +1102,7 @@
   function moveDrag(x, y) {
     const d = drag;
     d.ghost.style.left = (x - d.offX) + 'px'; d.ghost.style.top = (y - d.offY) + 'px';
-    const pile = document.querySelector('.pile.discard');
+    const pile = document.querySelector('.pile.discard.mine');
     d.overPile = false;
     if (pile && canDropOnDiscard(d)) {
       const r = pile.getBoundingClientRect();
@@ -994,7 +1112,7 @@
     if (d.overPile) return;
     const hand = $('#hand'), hr = hand.getBoundingClientRect();
     if (x < hr.left - 40 || x > hr.right + 40 || y < hr.top - 50 || y > hr.bottom + 50) return; // outside the hand: keep the spot
-    const px = x - hr.left, py = y - hr.top;
+    const px = x - hr.left + hand.scrollLeft, py = y - hr.top + hand.scrollTop;   // the hand can scroll sideways on small screens
     const isGroup = d.kind === 'group';
     const targets = isGroup ? [...hand.children].filter(n => n !== d.el) : [...hand.querySelectorAll('.card')].filter(n => n !== d.el);
     let target = null, before = true, best = Infinity, tp = null;
@@ -1032,7 +1150,7 @@
     const d = drag; drag = null;
     if (d.ghost) d.ghost.remove();
     document.body.classList.remove('dragging');
-    const pile = document.querySelector('.pile.discard'); if (pile) pile.classList.remove('drop-target', 'drop-hover');
+    const pile = document.querySelector('.pile.discard.mine'); if (pile) pile.classList.remove('drop-target', 'drop-hover');
     suppressClick = true; setTimeout(() => { suppressClick = false; }, 0);
     if (!cancelled && d.overPile && canDropOnDiscard(d)) { onDiscard(d.id, true); return; }
     if (!cancelled) {
@@ -1120,7 +1238,7 @@
         const box = el('div', 'seg ' + (sg.gid == null ? 'loose' : 'grp'));
         if (sg.gid != null) {
           const lab = groupLabel(sg.ids);
-          box.dataset.gid = sg.gid; box.classList.add(lab.cls);
+          box.dataset.gid = sg.gid; box.classList.add(...lab.cls.split(' '));
           box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Group: ' + lab.text);
           const tag = el('div', 'grp-tag');
           const nm = el('span', 'grp-name', lab.text); nm.title = (lab.title ? lab.title + '. ' : '') + 'Drag here to move the whole group';
@@ -1160,7 +1278,7 @@
     }
 
     const hint = $('#hint'); hint.innerHTML = '';
-    if (settings.hints && g.phase !== 'idle' && g.phase !== 'over' && g.phase !== 'timeOffer') {
+    if (settings.hints && g.phase !== 'idle' && g.phase !== 'over' && g.phase !== 'timeOffer' && g.phase !== 'rubOffer') {
       const a = C.analyze(g, ME), top = C.topDiscard(g);
       const takeIt = myTurn('draw') && top != null && g.stock.length && !completesMe(C.cardType(top)) && C.aiChooseDraw(g, ME) === 'discard';
       if (takeIt) hint.append(L('Hint: take the ' + cn(C.cardType(top)) + ' from the discard pile. It brings you closer than a blind draw.'));
@@ -1171,6 +1289,7 @@
         if (a.waiting.length) { hint.append(L('Purro! Any of these completes your hand: ')); hint.append(miniRow(a.waiting)); }
         else { hint.append(L('You need ' + plural(a.distance, 'more card') + '. Useful draws: ')); hint.append(miniRow(a.useful.slice(0, 12))); if (a.useful.length > 12) hint.append(L(' +' + (a.useful.length - 12) + ' more')); }
       }
+      if (a.needB && !a.baksyo && !takeIt) hint.append(el('span', 'hint-b', 'You hold a king, so you need a baksyo to win: three or four aces, or 3-4-5 or jack-horse-king of one suit.'));
     }
 
     const bar = $('#bar'); bar.innerHTML = '';
@@ -1178,11 +1297,13 @@
     else if (g.phase === 'idle') bar.append(btn('Deal', deal, 'primary'));
     else if (g.phase === 'over') bar.append(btn('Show result', () => { modal = 'result'; render(); }), matchDone() ? btn('New match', onNewMatch, 'primary') : btn('Next hand', deal, 'primary'));
     else if (myTurn('draw')) {
+      if (C.legalActions(g, ME).declareRub) bar.append(btn('Win now with the rub', onDeclareRub, 'primary'));
       const top = C.topDiscard(g);
       if (g.stock.length) bar.append(btn('Draw from stock', onStock, top == null ? 'primary' : ''));
       if (top != null && C.legalActions(g, ME).takeDiscard) { const b = btn('Take the ' + cn(C.cardType(top)), onTake, completesMe(C.cardType(top)) && g.penalty[ME] === 0 ? 'primary' : ''); bar.append(b); }
       if (!g.stock.length) bar.append(btn('End hand (stock empty)', onEnd));
     } else if (myTurn('discard')) {
+      if (C.legalActions(g, ME).declareRub && pickExtra == null) bar.append(btn('Win now with the rub', onDeclareRub));
       if (pickExtra != null) bar.append(btn('Cancel secret', () => { pickExtra = null; render(); }));
       else {
         const one = selIds.length === 1 ? selIds[0] : null;
@@ -1204,9 +1325,9 @@
   function handMarks() {
     const marks = {};
     if (!settings.hints || g.phase === 'idle' || g.phase === 'over') return marks;
-    const plan = C.keepPlan(C.poolCounts(g, ME), C.slotsFor(g, ME));
+    const plan = C.planFor(g, ME);
     const pool = g.hands[ME].slice().sort(byType).concat(C.extrasOf(g, ME));
-    const complete = { king: 1, secret: 1, set: 1, run: 1 }, partial = { set2: 1, run2: 1, secret3: 1 };
+    const complete = { king: 1, secret: 1, set: 1, run: 1, pong: 1 }, partial = { set2: 1, run2: 1, pong2: 1, secret3: 1 };
     for (const gp of plan) {
       const cls = complete[gp.kind] ? 'meld' : partial[gp.kind] ? 'part' : null;
       for (const t of gp.types) {
@@ -1220,16 +1341,19 @@
   }
 
   // ---------- modals ----------
-  let modalKind = null;
+  let modalKind = null, discardFocus = null;
   function renderModal(force) {
     const m = $('#modal');
     if (!modal) { m.hidden = true; m.innerHTML = ''; modalKind = null; return; }
     if (!force && modalKind === modal && m.firstElementChild && (modal === 'rules' || modal === 'settings' || modal === 'friend')) return; // keep typed text, scroll and focus
     const opening = modalKind !== modal;
+    const keepScroll = !opening && m.firstElementChild ? m.firstElementChild.scrollTop : 0;
     m.hidden = false; m.innerHTML = '';
     let box;
     if (modal === 'result') box = resultBox();
     else if (modal === 'time') box = timeBox();
+    else if (modal === 'rub') box = rubBox();
+    else if (modal === 'discards') box = discardsBox();
     else if (modal === 'rules') box = rulesBox();
     else if (modal === 'friend') box = friendBox();
     else if (modal === 'stats') box = statsBox();
@@ -1237,7 +1361,8 @@
     box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
     const h2 = box.querySelector('h2'); if (h2) { h2.id = 'dialog-title-' + modal; box.setAttribute('aria-labelledby', h2.id); }
     m.append(box);
-    m.onclick = e => { if (e.target === m && modal !== 'time') closeModal(); };
+    if (keepScroll) box.scrollTop = keepScroll;
+    m.onclick = e => { if (e.target === m && modal !== 'time' && modal !== 'rub') closeModal(); };
     modalKind = modal;
     if (opening) { const f = box.querySelector('.btn.primary') || box.querySelector('.btn'); if (f) setTimeout(() => { try { f.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 0); }
   }
@@ -1250,8 +1375,9 @@
       box.append(el('p', null, 'Nobody completed a hand before the stock ran out, so the hand is a draw and nobody pays (secrets already paid stand). ' + name(g.dealer) + ' deals again.'));
     } else {
       const w = r.winner, mine = w === ME, partner = w === C.partnerOf(ME);
-      box.append(el('h2', null, 'Cuajo! ' + (mine ? 'You win the hand' : name(w) + (partner ? ' (your partner)' : '') + ' wins the hand')));
-      const src = { stock: 'drawn from the stock', discard: 'taken from the discard pile', time: 'claimed with “time” from another player’s stock draw', deal: 'the hand was complete as dealt' }[r.source];
+      box.append(el('h2', null, winWord(r) + '! ' + (mine ? 'You win the hand' : name(w) + (partner ? ' (your partner)' : '') + ' wins the hand')));
+      const src = r.special && r.source === 'deal' ? 'the kings were dealt to the winner'
+        : { stock: 'drawn from the stock', discard: 'taken from the discard pile', time: 'claimed with “time” from another player’s stock draw', claim: 'claimed from another player’s shown stock draw', deal: 'the hand was complete as dealt' }[r.source];
       box.append(el('h3', null, 'Winning hand'));
       const groups = el('div', 'groups');
       let bounitMarked = false;
@@ -1266,22 +1392,13 @@
       }
       for (const s of r.secrets) { const ge = el('div', 'group'); for (const id of s.cards.concat(s.extra != null ? [s.extra] : [])) ge.append(cardEl(C.cardType(id), { mini: true })); ge.append(el('span', 'tag', s.kind === 'sowee' ? 'sowee secret' : 'secret')); groups.append(ge); }
       box.append(groups);
-      if (r.extraDraws && r.extraDraws.length) {
-        box.append(el('h3', null, 'Extra cards drawn from the stock'));
-        box.append(el('p', null, 'The conditions were not met from the hand, so ' + plural(r.extraDraws.length, 'extra card') + (r.extraDraws.length === 1 ? ' was' : ' were') + ' drawn (up to 15 allowed)' + (r.cond1 && r.cond2 ? ' until both conditions held.' : ' without meeting both conditions.')), miniRow(r.extraDraws.map(C.cardType)));
-      }
       box.append(el('h3', null, 'Payment'));
       const dl = el('dl', 'kv');
       const kv = (k, v) => dl.append(el('dt', null, k), el('dd', null, v));
-      if (r.bounit != null) kv('Bounit (winning card)', cn(C.cardType(r.bounit)) + ' — ' + src); else kv('Bounit', src);
-      kv('Kings in the hand', r.kings + (r.kings ? ' (worth ' + C.money(r.kingsValue) + ')' : ''));
-      if (r.porbis) kv('Porbis', 'no kings, or one king inside its jack-horse-king run: a flat ' + C.money(300));
-      else if (r.fromStock) kv('Bounit from the stock', C.money(110) + ' + kings');
-      else {
-        kv('Two cards go with the bounit', r.cond1 ? 'yes' : 'no');
-        kv('A card identical to the sowee + two that go with it', r.cond2 ? 'yes' : 'no');
-        kv('Base payment', C.money(r.base) + ' + kings');
-      }
+      if (r.bounit != null) kv('Winning card', cn(C.cardType(r.bounit)) + ' — ' + src); else kv('How it was won', src);
+      if (r.special) kv('Special win', { prinsesa: 'Prinsesa: one king of every suit and no other kings', rub: 'Rub: three or four kings of the same suit', sevenkings: 'Seven kings: seven kings in one hand' }[r.special]);
+      kv('Starting price', C.money(r.start) + ' (' + START_LABEL[r.startKind] + ')');
+      for (const it of r.items || []) kv(ITEM_LABEL[it.key], it.count + ' \u00d7 ' + C.money(it.each) + ' = ' + C.money(it.amount));
       kv('Each opponent pays', C.money(r.perOpponent));
       const delta = mine ? r.total : partner ? 0 : -r.perOpponent;
       kv('Your balance', (delta > 0 ? '+' : '') + C.money(delta) + (partner ? ' (partners do not pay each other)' : ''));
@@ -1290,6 +1407,21 @@
     }
     matchSection(box);
     box.append(barWith(btn('See your stats', () => { modal = 'stats'; statsReset = false; renderModal(true); }), btn('Close', closeModal), matchDone() ? btn('New match', onNewMatch, 'primary') : btn('Next hand', deal, 'primary')));
+    return box;
+  }
+
+  const START_LABEL = { fourKings: 'four kings of one suit', prinsesa: 'prinsesa', rub: 'rub', sevenkings: 'seven kings', nokings: 'no kings', oneking: 'only one king', kingBaksyo: 'won with the king that finishes a jack-horse-king baksyo', regular: '2 to 6 kings' };
+  const ITEM_LABEL = { kings: 'Kings', run345: '3-4-5 runs (baksyo)', runJHK: 'Jack-horse-king runs (a king as the baksyo)', pong: 'Pongs', fourAces: 'Four aces', threeAces: 'Three aces', setOfFour: 'Sets of four', secrets: 'Secrets', sowee: 'Cards matching the sowee' };
+  /** Dealt three kings of one suit: win now, or wait for the fourth. */
+  function rubBox() {
+    const o = g.rubOffer, box = el('div', 'box');
+    box.append(el('h2', null, 'Rub!'));
+    const row = el('div', 'time-card');
+    const three = el('div', 'stack'); for (let i = 0; i < 3; i++) three.append(cardEl(o.type));
+    row.append(three);
+    row.append(el('p', null, 'You were dealt three ' + cn(o.type) + ' cards. Win now with the rub, or keep playing and wait for the fourth: four kings of one suit start at ' + C.money(C.PRICE.fourKings) + ' instead of ' + C.money(C.PRICE.top) + '. While you wait you can still take the rub on any of your turns, but if someone else wins first, it is gone.'));
+    box.append(row);
+    box.append(barWith(btn('Wait for the fourth king', () => onRub(false)), btn('Win now with the rub', () => onRub(true), 'primary')));
     return box;
   }
 
@@ -1371,7 +1503,7 @@
 
   function rulesBox() {
     const box = el('div', 'box rules');
-    box.innerHTML = settings.lang === 'tl' ? RULES_TL : RULES_HTML;
+    box.innerHTML = settings.lang === 'tl' ? tlVocab(RULES_TL) : RULES_HTML;
     box.append(barWith(btn('Close', closeModal, 'primary')));
     return box;
   }
@@ -1384,24 +1516,37 @@
     '<h3>Players and deal</h3>',
     '<p>Four players in two partnerships: you and North against East and West. The dealer takes 16 cards and everyone else 15. The next card is turned face up as the <b>sowee</b>; it is never played but affects the payment. The rest is the stock. The dealer discards first, and play passes to the right (you, then East, North, West). The winner of a hand deals the next one; after a drawn hand the same player deals again.</p>',
     '<h3>Your turn</h3>',
-    '<ol><li>Take the top card of the stock, or the previous player’s discard (the top of the discard pile). A discard can only be taken by the next player in turn.</li><li>If you hold four identical cards, you may lay them face down as a <b>secret</b> and each opponent pays you 50 centavos at once. The three cards identical to the sowee also make a secret when laid down together with any fourth card from your hand; that fourth card is not free: it must still be part of a combination when you win, so a king is the usual choice.</li><li>Discard one card face up. <b>Kings are never discarded.</b></li></ol>',
+    '<ol><li>Take the top card of the stock, or the previous player’s discard (the top of the discard pile). A discard can only be taken by the next player in turn. You can never win with a discard: if the top discard would complete your hand, leave it and draw from the stock.</li><li>If you hold four identical cards, you may lay them face down as a <b>secret</b>; it adds ₱50 to your price when you win. The three cards identical to the sowee also make a secret when laid down together with any fourth card from your hand; that fourth card is not free: it must still be part of a combination when you win, so a king is the usual choice.</li><li>Discard one card face up. <b>Kings are never discarded.</b></li></ol>',
     '<h3>Combinations</h3>',
-    '<ul><li><b>Set</b>: three or four cards of the same rank in different suits.</li><li><b>Run</b>: 3-4-5 or jack-horse-king in one suit (aces never run).</li><li><b>Secret</b>: four identical cards.</li><li><b>King</b>: a king counts as a combination on its own.</li></ul>',
+    '<ul><li><b>Set</b>: three or four cards of the same rank in different suits.</li><li><b>Run</b>: 3-4-5 or jack-horse-king in one suit (aces never run).</li><li><b>Pong</b>: three or four identical cards (same rank and suit).</li><li><b>Secret</b>: four identical cards laid face down.</li><li><b>King</b>: a king counts as a combination on its own.</li></ul>',
+    '<h3>Baksyo</h3>',
+    '<p>If your hand holds any king, one of your combinations must be a <b>baksyo</b> before you can win: three or four aces (a set or a pong of aces), or 3-4-5 or jack-horse-king of one suit. A secret of aces counts as the baksyo. A hand with no kings at all does not need a baksyo. In your hand, a finished group that is a baksyo is labelled baksyo.</p>',
     '<h3>Purro and time</h3>',
-    '<p>When one more card would complete your hand, you say <b>purro</b> after discarding and set a king face up as a marker. From then on the other players show every card they draw from the stock. If someone draws the card you need, you call <b>time</b>, take it, and win. When a shown card completes more than one hand, the player who drew it wins if it completes theirs; otherwise the first purro player after them in turn order. Out of turn you can only win with a card drawn from the stock, never with a discard.</p>',
+    '<p>When one more card would complete your hand, you say <b>purro</b> after discarding and set a king face up as a marker. From then on the other players show every card they draw from the stock. If someone draws the card you need, you call <b>time</b>, take it, and win. When a shown card completes more than one hand, the player who drew it wins if it completes theirs; otherwise the first purro player after them in turn order. Whether it is your turn or not, you can only win with a card from the stock, never with a discard.</p>',
     '<p>If you draw a king that does not complete your hand and you can no longer finish with one card, you announce that you are no longer purro and take back the marker. For your next two turns you must show every card you draw and may not announce purro or win; on the third turn you play normally again.</p>',
     '<h3>Winning and payment</h3>',
-    '<p>The first player to arrange all 16 cards (secrets included) into combinations wins the hand. The winning card is the <b>bounit</b>. Each opponent pays the winner; partners pay nothing to each other. Two things raise the payment: (1) two cards in your hand that <b>go with</b> the bounit, and (2) a card identical to the sowee plus two cards that go with it. Cards go with a card when they form a run with it in the same suit; for an ace, two other aces of different suits. If the bounit came from another player and the conditions are not met from your hand, you first draw up to 15 extra cards from the stock looking for them; those cards need not be melded and add no king value.</p>',
-    '<table><tr><th>Situation</th><th>Each opponent pays</th></tr>',
-    '<tr><td>Bounit drawn from the stock</td><td>₱1.10 + kings</td></tr>',
-    '<tr><td>Bounit from another player, both conditions met (from the hand or after the extra cards)</td><td>₱1.10 + kings</td></tr>',
-    '<tr><td>… only two cards go with the bounit</td><td>₱0.60 + kings</td></tr>',
-    '<tr><td>… only the sowee condition</td><td>₱0.70 + kings</td></tr>',
-    '<tr><td>… neither</td><td>₱0.20 + kings</td></tr>',
-    '<tr><td><b>Porbis</b>: no kings, or a single king inside its jack-horse-king run</td><td>₱3.00 flat</td></tr></table>',
-    '<p>Kings are worth 50 centavos for the king of coins and 20 centavos for any other king. A bounit claimed with “time” counts as taken from another player. If the stock runs out the hand is a draw with no payment (secrets already paid stand).</p>',
+    '<p>The first player to arrange all 16 cards (secrets included) into combinations wins the hand; the winning card is the <b>bounit</b>. Each opponent pays the winner and partners pay nothing to each other. The price is a starting amount plus points for what the winning hand holds, counted in the arrangement worth the most.</p>',
+    '<table><tr><th>Starting price</th><th>Each opponent pays</th></tr>',
+    '<tr><td>Four kings of one suit</td><td>₱1,000</td></tr>',
+    '<tr><td>Prinsesa, rub or seven kings</td><td>₱500</td></tr>',
+    '<tr><td>A win with no kings, or with only one king</td><td>₱500</td></tr>',
+    '<tr><td>Winning with the king that finishes your jack-horse-king baksyo (you hold the jack and horse of a suit and the king of that suit is your winning card)</td><td>₱500</td></tr>',
+    '<tr><td>Any other win (2 to 6 kings)</td><td>₱200</td></tr>',
+    '<tr><th>Plus</th><th></th></tr>',
+    '<tr><td>Every king</td><td>₱5</td></tr>',
+    '<tr><td>A 3-4-5 run (baksyo)</td><td>₱5</td></tr>',
+    '<tr><td>A jack-horse-king run (a king used as the baksyo)</td><td>₱10</td></tr>',
+    '<tr><td>Every pong</td><td>₱20</td></tr>',
+    '<tr><td>Three aces / four aces</td><td>₱5 / ₱10</td></tr>',
+    '<tr><td>Every set of four cards</td><td>₱5</td></tr>',
+    '<tr><td>Every secret</td><td>₱50</td></tr>',
+    '<tr><td>Every card identical to the sowee</td><td>₱20</td></tr></table>',
+    '<p>If the stock runs out, the hand is a draw and nobody pays.</p>',
+    '<h3>Winning with kings</h3>',
+    '<p>Three special hands win at once, whether you are purro or not, straight from the deal or right after a stock draw. They need no baksyo.</p>',
+    '<ul><li><b>Prinsesa</b>: exactly four kings, one of each suit, and no other kings.</li><li><b>Rub</b>: three or four kings of the same suit. When someone is purro, stock draws are shown, so if a shown card is the third of a king you hold two of, you claim it and win. If you are <b>dealt</b> three kings of one suit, you choose: win now, or keep playing and wait for the fourth, since four kings of one suit start at ₱1,000. While you wait you can still take the rub on any of your turns, but if someone else wins first, it is gone.</li><li><b>Seven kings</b>: any seven kings. Drawn one at a time, seven kings always make a rub or a prinsesa first, so in practice this comes from the deal.</li></ul>',
     '<h3>Arranging your hand</h3>',
-    '<p>Click cards to select them (click again to let go), then press <b>Group</b> to keep them together. Each group is labelled: Set, Run, Kings or Four alike when it is a finished combination, Needs 1 when one card is missing, or No match. Drag a card into or out of a group, drag a group by its label to move it, or press the \u00d7 on its label to break it up. <b>Auto-group</b> sorts your whole hand into groups for you; Suit and Rank sort the loose cards. Drag cards to put them in any order (on a touch screen, press and hold a card first). New cards arrive at the right end. On your discard turn, select one card and press Discard, double-click it, or drop it on the discard pile. With the keyboard, Enter selects the focused card and Shift + left or right arrow moves it.</p>',
+    '<p>Click cards to select them (click again to let go), then press <b>Group</b> to keep them together. Each group is labelled: Set, Run, Pong, Kings or Four alike when it is a finished combination (with baksyo added when it is one), Needs 1 when one card is missing, or No match. Drag a card into or out of a group, drag a group by its label to move it, or press the \u00d7 on its label to break it up. <b>Auto-group</b> sorts your whole hand into groups for you; Suit and Rank sort the loose cards. Drag cards to put them in any order (on a touch screen, press and hold a card first). New cards arrive at the right end. On your discard turn, select one card and press Discard, double-click it, or drop it on the discard pile. With the keyboard, Enter selects the focused card and Shift + left or right arrow moves it.</p>',
     '<p>The computer players are not perfect. On Normal they now and then miss a useful discard, throw away a slightly worse card, or fail to notice a card they could claim with \u201ctime\u201d. Easy makes them sloppier and Hard makes them play their best; choose in Settings.</p>',
     '<p>The other players take their time like real people: you can watch each one think, draw, and discard. If it feels slow, press <b>Next move</b> (or the N key) to skip the pause; every card still moves across the table so you can follow it. Each hand starts with the deal going round the table. You can also change the pace in Settings.</p>',
     '<h3>Playing with a friend</h3>',
@@ -1409,7 +1554,7 @@
     '<p><b>Settings</b> lets you rename the players, choose the table and card backs, card size, pesos or dollars, sounds, where picked-up cards go, and whether the winner or the next player deals after a win.</p>',
     '<p>Online, up to three friends can join one game; each takes over a computer player\u2019s seat, even in the middle of a game. Use <b>Chat</b> to send quick messages that pop up over your seat. In Settings you can play a <b>match</b> (8 or 16 hands, or first to a money target) and see <b>your stats</b>.</p>',
     '<h3>House choices in this version</h3>',
-    '<ul><li>When the stock is empty, the player to move may still take the last discard if it wins; otherwise the hand ends.</li><li>Purro is announced automatically whenever you are one card away, and the two-turn penalty after a broken purro is applied automatically.</li><li>Amounts are shown in pesos with the figures from the source rules.</li></ul>',
+    '<ul><li>You can only win with a card from the stock (your own draw, or another player’s draw claimed with “time”), never with a discard. When the stock runs out, the hand is a draw.</li><li>Pongs, the baksyo, prinsesa, rub, seven kings and the price list are house rules from Filipino family tables.</li><li>Purro is announced automatically whenever you are one card away, and the two-turn penalty after a broken purro is applied automatically.</li><li>Prices follow the house list above, in whole pesos.</li></ul>',
     '<p>Rules after <a href="https://www.pagat.com/rummy/cuajo.html" target="_blank" rel="noopener">pagat.com: Cuajo</a>.</p>'
   ].join('');
 
@@ -1545,7 +1690,9 @@
       v.hands[s] = g.hands[s].map(id => (g.purro[s] && id === g.marker[s]) ? id : -1);
       v.secrets[s] = g.secrets[s].map(x => Object.assign({}, x, { cards: x.cards.map(() => -1), extra: x.extra != null ? -1 : null, type: x.kind === 'sowee' ? x.type : -1 }));
       v.waiting[s] = [];
+      if (v.rubWait) v.rubWait[s] = false;
     }
+    if (!over && v.rubOffer && v.rubOffer.seat !== seat) v.rubOffer = Object.assign({}, v.rubOffer, { type: -1 });
     if (!over && g.drawn != null && g.turn !== seat && g.drawnFrom === 'stock' && !(g.lastShown && g.lastShown.id === g.drawn)) v.drawn = null;
     return v;
   }
@@ -1689,7 +1836,7 @@
       const ok = a === 'drawStock' ? la.drawStock : a === 'takeDiscard' ? la.takeDiscard : a === 'endHand' ? la.endHand
         : a === 'discard' ? la.discard && g.hands[seat].indexOf(arg) >= 0 && !C.isKing(arg)
         : a === 'secret' ? la.discard && !!arg && la.secrets.some(o => o.type === arg.type)
-        : a === 'time' ? la.timeClaim : false;
+        : a === 'time' ? la.timeClaim : a === 'rub' ? la.rubChoice : a === 'rubNow' ? la.declareRub : false;
       if (!ok) { sendStateTo(gu, null); return; }
       const r = act(seat, a, arg); announce(r.b); drive();
     } catch (e) { console.error(e); sendStateTo(gu, null); }
@@ -1793,7 +1940,7 @@
   function applyRemote(view, move) {
     let from = null;
     if (move) {
-      if (move.kind === 'draw') from = move.src === 'stock' ? rectOf('.pile.stock .card') : rectOf('.pile.discard .card');
+      if (move.kind === 'draw') from = move.src === 'stock' ? rectOf('.pile.stock .card') : discardRect(topDiscardSeat());
       else if (move.kind === 'discard') from = cardRect(move.seat, move.id);
       else if (move.kind === 'time') from = seatTarget(move.from).rect;
     }
@@ -2034,7 +2181,7 @@
 
   // ---------- stats (kept on this device, for your own seat) ----------
   const STATS_KEY = 'cuajo.stats.v1';
-  const STATS0 = { hands: 0, won: 0, draws: 0, fromStock: 0, byTime: 0, fromDiscard: 0, porbis: 0, purros: 0, secrets: 0, bestPayout: 0, totalWon: 0, streak: 0, bestStreak: 0, matches: 0, matchesWon: 0, counted: [] };
+  const STATS0 = { hands: 0, won: 0, draws: 0, fromStock: 0, byTime: 0, fromDiscard: 0, special: 0, porbis: 0, purros: 0, secrets: 0, bestPayout: 0, totalWon: 0, streak: 0, bestStreak: 0, matches: 0, matchesWon: 0, counted: [] };
   let stats = loadStats(), statsReset = false;
   function loadStats() { try { const s = JSON.parse(localStorage.getItem(STATS_KEY) || '{}'); return Object.assign({}, STATS0, s, { counted: Array.isArray(s.counted) ? s.counted : [] }); } catch (e) { return Object.assign({}, STATS0, { counted: [] }); } }
   function saveStats() { try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (e) { /* storage unavailable */ } }
@@ -2055,8 +2202,9 @@
       else if (r.winner === me) {
         stats.won++; stats.streak++; stats.bestStreak = Math.max(stats.bestStreak, stats.streak);
         stats.totalWon += r.total; stats.bestPayout = Math.max(stats.bestPayout, r.total);
-        if (r.source === 'time') stats.byTime++; else if (r.source === 'discard') stats.fromDiscard++; else stats.fromStock++;
+        if (r.source === 'time' || r.source === 'claim') stats.byTime++; else if (r.source === 'discard') stats.fromDiscard++; else stats.fromStock++;
         if (r.porbis) stats.porbis++;
+        if (r.special) stats.special = (stats.special || 0) + 1;
       } else stats.streak = 0;
       dirty = true;
     }
@@ -2076,7 +2224,8 @@
     tile('Money won in total', C.money(stats.totalWon));
     tile('Times purro', stats.purros);
     tile('Secrets laid down', stats.secrets);
-    tile('Porbis wins', stats.porbis);
+    tile('No-king wins', stats.porbis);
+    tile('Prinsesa, rub and seven kings', stats.special || 0);
     tile('Matches won', stats.matchesWon + ' / ' + stats.matches);
     box.append(grid);
     box.append(el('h3', null, 'How you won'));
@@ -2095,6 +2244,15 @@
   let installPrompt = null;
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; try { render(); } catch (x) { /* not started yet */ } });
   window.addEventListener('appinstalled', () => { installPrompt = null; flash('Cuajo is installed. Open it from your home screen or apps.'); });
+  function fullscreenEl() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+  function canFullscreen() { return !standaloneApp() && !!(document.fullscreenEnabled || document.webkitFullscreenEnabled); }
+  function toggleFullscreen() {
+    const d = document.documentElement;
+    try {
+      if (fullscreenEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else { const p = (d.requestFullscreen || d.webkitRequestFullscreen).call(d, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); }
+    } catch (e) { /* not allowed here */ }
+  }
   function standaloneApp() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
   function appleDevice() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
   function onWebsite() { return location.protocol === 'https:' && /github\.io$/.test(location.hostname); }
@@ -2125,24 +2283,37 @@
     '<h3>Manlalaro at deal</h3>',
     '<p>Apat ang naglalaro, at magkakampi ang magkaharap. Labing-anim na baraha ang hawak ng dealer at labinlima naman ang sa iba. Ang susunod na baraha ay ibinubukas bilang <b>sowee</b>: hindi ito nilalaro pero may epekto sa bayad. Ang matitira ang magiging stock. Ang dealer ang unang magtatapon, at pakanan ang ikot ng laro. Ang nanalo ang magde-deal sa susunod; kapag tabla, parehong dealer ulit.</p>',
     '<h3>Sa turn mo</h3>',
-    '<ol><li>Bumunot sa stock, o kunin ang huling itinapon ng naunang manlalaro. Ang susunod lang sa turn ang puwedeng kumuha ng itinapon.</li><li>Kung may apat kang magkaparehong baraha, puwede mo itong ilapag nang nakataob bilang <b>secret</b>, at magbabayad sa iyo ng 50 sentimo ang bawat kalaban. Ang tatlong kapareho ng sowee, kasama ang kahit anong ikaapat na baraha, ay secret din; pero kailangan pa ring bahagi ng kombinasyon ang ikaapat na iyon sa pagpanalo, kaya king ang karaniwang pinipili.</li><li>Magtapon ng isang baraha. <b>Hindi puwedeng itapon ang king.</b></li></ol>',
+    '<ol><li>Bumunot sa stock, o kunin ang huling itinapon ng naunang manlalaro. Ang susunod lang sa turn ang puwedeng kumuha ng itinapon. Hindi ka puwedeng manalo gamit ang itinapon: kung bubuo sa hawak mo ang huling itinapon, iwan ito at bumunot sa stock.</li><li>Kung may apat kang magkaparehong baraha, puwede mo itong ilapag nang nakataob bilang <b>secret</b>; dagdag itong ₱50 sa bayad kapag nanalo ka. Ang tatlong kapareho ng sowee, kasama ang kahit anong ikaapat na baraha, ay secret din; pero kailangan pa ring bahagi ng kombinasyon ang ikaapat na iyon sa pagpanalo, kaya king ang karaniwang pinipili.</li><li>Magtapon ng isang baraha. <b>Hindi puwedeng itapon ang king.</b></li></ol>',
     '<h3>Mga kombinasyon</h3>',
-    '<ul><li><b>Set</b>: tatlo o apat na magkaparehong numero na magkakaiba ang suit.</li><li><b>Run</b>: 3-4-5 o sota-caballo-rey sa iisang suit (hindi puwede ang as).</li><li><b>Secret</b>: apat na magkaparehong baraha.</li><li><b>King</b>: kombinasyon na ang isang king kahit mag-isa.</li></ul>',
+    '<ul><li><b>Set</b>: tatlo o apat na magkaparehong numero na magkakaiba ang suit.</li><li><b>Run</b>: 3-4-5 o sota-caballo-rey sa iisang suit (hindi puwede ang as).</li><li><b>Pong</b>: tatlo o apat na magkaparehong-magkapareho na baraha (parehong numero at suit).</li><li><b>Secret</b>: apat na magkaparehong baraha na nakataob na inilapag.</li><li><b>King</b>: kombinasyon na ang isang king kahit mag-isa.</li></ul>',
+    '<h3>Baksyo</h3>',
+    '<p>Kapag may king ka sa hawak, kailangang <b>baksyo</b> ang isa sa mga kombinasyon mo bago ka manalo: tatlo o apat na as (set o pong ng as), o 3-4-5 o sota-caballo-rey sa iisang suit. Baksyo na rin ang secret ng as. Kapag wala kang kahit isang king, hindi mo kailangan ng baksyo. Sa hawak mo, may nakasulat na baksyo sa label ng grupong baksyo.</p>',
     '<h3>Purro at time</h3>',
-    '<p>Kapag isang baraha na lang ang kulang mo, sabihin ang <b>purro</b> pagkatapos magtapon at maglabas ng isang king bilang marker. Mula noon, ipinapakita ng iba ang bawat bunot nila sa stock. Kapag may nakabunot ng barahang kailangan mo, sabihin ang <b>time</b>, kunin ito, at panalo ka. Kung higit sa isa ang nangangailangan ng parehong baraha, panalo ang bumunot kung bubuo rin ito sa hawak niya; kung hindi, panalo ang unang naka-purro na kasunod niya. Kapag hindi mo turn, puwede ka lang manalo sa baraha na binunot mula sa stock, hindi sa itinapon.</p>',
+    '<p>Kapag isang baraha na lang ang kulang mo, sabihin ang <b>purro</b> pagkatapos magtapon at maglabas ng isang king bilang marker. Mula noon, ipinapakita ng iba ang bawat bunot nila sa stock. Kapag may nakabunot ng barahang kailangan mo, sabihin ang <b>time</b>, kunin ito, at panalo ka. Kung higit sa isa ang nangangailangan ng parehong baraha, panalo ang bumunot kung bubuo rin ito sa hawak niya; kung hindi, panalo ang unang naka-purro na kasunod niya. Turn mo man o hindi, puwede ka lang manalo sa barahang galing sa stock, hindi sa itinapon.</p>',
     '<p>Kapag nasira ang purro mo (halimbawa, nakabunot ka ng king na hindi bumuo), hindi ka na naka-purro. Sa susunod na dalawang turn, ipapakita mo ang bawat bunot at bawal kang mag-purro o manalo; sa ikatlong turn, normal na ulit.</p>',
     '<h3>Pagpanalo at bayad</h3>',
-    '<p>Panalo ang unang makabuo ng 16 na baraha (kasama ang secret) sa mga kombinasyon. Ang panalong baraha ay ang <b>bounit</b>. Nagbabayad sa nanalo ang bawat kalaban; hindi nagbabayaran ang magkakampi. Dalawang bagay ang nagpapalaki ng bayad: (1) may dalawang baraha sa hawak mo na <b>bagay</b> sa bounit, at (2) may hawak kang kapareho ng sowee at dalawang barahang bagay dito. Bagay ang mga baraha kapag bumubuo sila ng run sa parehong suit; para sa as, kailangan ng dalawa pang as na magkaiba ang suit. Kung galing sa iba ang bounit at hindi natupad ang mga kondisyon, puwedeng bumunot ng hanggang 15 dagdag na baraha para hanapin ang kailangan; hindi na kailangang isama sa kombinasyon ang mga iyon, at walang dagdag na halaga ang king na mabubunot doon.</p>',
-    '<table><tr><th>Sitwasyon</th><th>Bayad ng bawat kalaban</th></tr>',
-    '<tr><td>Nabunot sa stock ang bounit</td><td>₱1.10 + kings</td></tr>',
-    '<tr><td>Galing sa iba ang bounit, natupad ang dalawang kondisyon</td><td>₱1.10 + kings</td></tr>',
-    '<tr><td>… dalawang bagay lang sa bounit</td><td>₱0.60 + kings</td></tr>',
-    '<tr><td>… kondisyon lang ng sowee</td><td>₱0.70 + kings</td></tr>',
-    '<tr><td>… wala sa dalawa</td><td>₱0.20 + kings</td></tr>',
-    '<tr><td><b>Porbis</b>: walang king, o isang king sa loob ng sota-caballo-rey</td><td>₱3.00 flat</td></tr></table>',
-    '<p>Limampung sentimo ang halaga ng rey de oros at dalawampung sentimo ang bawat ibang king. Ang bounit na nakuha sa “time” ay parang galing sa iba. Kapag naubos ang stock, tabla ang hand at walang bayad (mananatili ang bayad sa secret).</p>',
+    '<p>Panalo ang unang makabuo ng 16 na baraha (kasama ang secret) sa mga kombinasyon; ang panalong baraha ay ang <b>bounit</b>. Nagbabayad sa nanalo ang bawat kalaban, at hindi nagbabayaran ang magkakampi. Ang bayad ay panimulang halaga at dagdag para sa laman ng panalong hawak, sa ayos na pinakamalaki ang halaga.</p>',
+    '<table><tr><th>Panimulang bayad</th><th>Bayad ng bawat kalaban</th></tr>',
+    '<tr><td>Apat na king na pareho ang suit</td><td>₱1,000</td></tr>',
+    '<tr><td>Prinsesa, rub o 7 kings</td><td>₱500</td></tr>',
+    '<tr><td>Panalo nang walang king, o iisa lang ang king</td><td>₱500</td></tr>',
+    '<tr><td>Nanalo sa king na bumuo ng sota-caballo-rey na baksyo (hawak mo ang sota at caballo ng isang suit, at ang rey ng suit na iyon ang panalong baraha)</td><td>₱500</td></tr>',
+    '<tr><td>Ibang panalo (2 hanggang 6 na king)</td><td>₱200</td></tr>',
+    '<tr><th>Dagdag</th><th></th></tr>',
+    '<tr><td>Bawat king</td><td>₱5</td></tr>',
+    '<tr><td>Run na 3-4-5 (baksyo)</td><td>₱5</td></tr>',
+    '<tr><td>Run na sota-caballo-rey (king ang baksyo)</td><td>₱10</td></tr>',
+    '<tr><td>Bawat pong</td><td>₱20</td></tr>',
+    '<tr><td>Tatlong as / apat na as</td><td>₱5 / ₱10</td></tr>',
+    '<tr><td>Bawat set na apat na baraha</td><td>₱5</td></tr>',
+    '<tr><td>Bawat secret</td><td>₱50</td></tr>',
+    '<tr><td>Bawat barahang kapareho ng sowee</td><td>₱20</td></tr></table>',
+    '<p>Kapag naubos ang stock, tabla ang hand at walang magbabayad.</p>',
+    '<h3>Panalo sa king</h3>',
+    '<p>Tatlong espesyal na hawak ang agad na panalo, naka-purro ka man o hindi, mula pa sa deal o pagkabunot sa stock. Hindi na kailangan ng baksyo.</p>',
+    '<ul><li><b>Prinsesa</b>: eksaktong apat na king, isa sa bawat suit, at wala nang ibang king.</li><li><b>Rub</b>: tatlo o apat na king na pareho ang suit. Kapag may naka-purro, ipinapakita ang bawat bunot sa stock; kung ang ipinakita ay ang ikatlong king na may dalawa ka na, kunin mo ito at panalo ka. Kapag tatlong king na pareho ang suit ang <b>na-deal</b> sa iyo, ikaw ang pipili: manalo na, o maghintay sa ikaapat, dahil ₱1,000 ang panimula ng apat na king na pareho ang suit. Habang naghihintay, puwede mo pa ring kunin ang rub sa alinmang turn mo, pero kapag may ibang nanalo muna, wala na ito.</li><li><b>7 kings</b>: kahit anong pitong king. Kapag isa-isang nabunot, laging nauuna ang rub o prinsesa, kaya kadalasan sa deal ito nangyayari.</li></ul>',
     '<h3>Pag-aayos ng hawak</h3>',
-    '<p>I-click ang mga baraha para piliin, tapos pindutin ang <b>I-grupo</b>. May label ang bawat grupo: Set, Run, Kings o Apat na pareho kapag buo na, Kulang 1 kapag isa na lang ang kulang, o Hindi tugma. I-drag ang baraha papasok o palabas ng grupo, i-drag ang grupo sa label nito, o pindutin ang × para buwagin. Inaayos ng <b>Auto-grupo</b> ang buong hawak mo. Para magtapon: pumili ng isang baraha at pindutin ang Itapon, i-double-click, o ihulog sa tapunan.</p>',
+    '<p>I-click ang mga baraha para piliin, tapos pindutin ang <b>I-grupo</b>. May label ang bawat grupo: Set, Run, Pong, Kings o Apat na pareho kapag buo na (may baksyo kapag baksyo ito), Kulang 1 kapag isa na lang ang kulang, o Hindi tugma. I-drag ang baraha papasok o palabas ng grupo, i-drag ang grupo sa label nito, o pindutin ang × para buwagin. Inaayos ng <b>Auto-grupo</b> ang buong hawak mo. Para magtapon: pumili ng isang baraha at pindutin ang Itapon, i-double-click, o ihulog sa tapunan.</p>',
     '<p>Naglalaro ang mga computer sa bilis na parang totoong tao; pindutin ang <b>Susunod</b> (o N) kung gusto mong bilisan. Sa Normal, paminsan-minsan silang nagkakamali. Sa Settings mapapalitan ang pangalan, wika, mesa, laki ng baraha, pera, tunog, match at iba pa.</p>',
     '<h3>Makipaglaro</h3>',
     '<p><b>Online</b>: magsimula ng laro at ipadala ang code o link sa hanggang tatlong kaibigan, kahit magkaiba ang network; papalitan nila ang mga computer. May <b>Chat</b> para sa mabilis na mensahe. <b>Sa computer na ito</b>: maghalinhinan sa iisang computer; nakatago ang baraha sa pagitan ng mga turn. Gumagana ang online sa website (' + PAGES_URL + ') at sa na-download na file.</p>',
@@ -2155,13 +2326,16 @@
     $('#btn-friend').addEventListener('click', () => { modal = 'friend'; friendUi.error = ''; renderModal(true); });
     $('#btn-chat').addEventListener('click', toggleChat);
     $('#btn-install').addEventListener('click', installApp);
+    $('#btn-full').addEventListener('click', toggleFullscreen);
+    document.addEventListener('fullscreenchange', () => render());
+    document.addEventListener('webkitfullscreenchange', () => render());
     $('#btn-settings').addEventListener('click', () => { modal = 'settings'; confirmReset = false; render(); });
     document.addEventListener('keydown', e => {
       const typing = e.target && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName);
       if ((e.key === 'n' || e.key === 'N') && !typing && !modal && !e.metaKey && !e.ctrlKey && !e.altKey) { skipAhead(); return; }
       if (e.key !== 'Escape') return;
       if (drag && drag.active) { endDrag(true); return; }
-      if (modal && modal !== 'time') closeModal();
+      if (modal && modal !== 'time' && modal !== 'rub') closeModal();
     });
     window.addEventListener('pointermove', onDragMove);
     window.addEventListener('pointerup', onDragEnd);

@@ -422,3 +422,121 @@ html[data-back="blue"] .card.back { background: repeating-linear-gradient(45deg,
   .btn.link { min-height: 38px; }
 }
 @media (max-height: 500px) and (orientation: landscape) { .sort-tab { min-height: 34px; } }
+
+/* baksyo marks and the baksyo hint */
+.hint .hint-b { flex-basis: 100%; color: var(--warn); }
+.seg.grp.baksyo .grp-name { color: var(--good); }
+
+/* each player's discards sit between them and the next player */
+.center { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.6fr) minmax(0, 1fr); grid-template-areas: "dnw piles dne" "dnw status dne" "dsw bar dse" "dsw log dse"; column-gap: 12px; row-gap: 8px; align-items: center; justify-items: center; }
+.center > .piles { grid-area: piles; }
+.center > .status { grid-area: status; }
+.center > .center-bar { grid-area: bar; gap: 6px 10px; flex-wrap: wrap; align-items: center; }
+.center > .log { grid-area: log; }
+.dspot { --cw: calc(clamp(40px, 4.2vw, 58px) * var(--size)); min-width: 0; }
+.d-nw { grid-area: dnw; justify-self: start; align-self: start; }
+.d-ne { grid-area: dne; justify-self: end; align-self: start; }
+.d-sw { grid-area: dsw; justify-self: start; align-self: end; }
+.d-se { grid-area: dse; justify-self: end; align-self: end; }
+.dstack { display: flex; padding-left: calc(var(--cw) * 0.6); border-radius: 8px; cursor: pointer; }
+.dstack > .card, .dstack > .slot { margin-left: calc(var(--cw) * -0.6); }
+.dstack:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.pile.discard .dlbl { background: none; border: 0; padding: 2px 4px; font: 600 12.5px/1.2 var(--font-body); color: var(--fg-dim); text-decoration: underline; text-decoration-color: rgba(255, 255, 255, 0.25); text-underline-offset: 3px; cursor: pointer; max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pile.discard .dlbl:hover { color: var(--fg); }
+.pile.discard.mine .dlbl { color: var(--accent); }
+.pile.discard.clickable .card:not(.top) { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); cursor: pointer; }
+.pile.discard.clickable .card:not(.top):hover { transform: none; }
+.discards-box .dgroup { padding: 8px 10px; border-radius: 10px; margin-top: 8px; background: rgba(0, 0, 0, 0.18); }
+.discards-box .dgroup.focus { box-shadow: 0 0 0 2px var(--accent); }
+.discards-box h3 { margin: 0 0 6px; }
+.discards-box .drow { display: flex; flex-wrap: wrap; gap: 5px; --cw: 34px; }
+.discards-box .card.taken { opacity: 0.38; }
+.discards-box .card.latest { box-shadow: 0 0 0 2px var(--accent); }
+@media (max-width: 760px) {
+  .center { column-gap: 6px; row-gap: 5px; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr); }
+  .dspot { --cw: calc(38px * var(--size)); }
+}
+@media (max-width: 600px) {
+  .dspot { --cw: calc(34px * var(--size)); }
+  .pile.discard .dlbl { font-size: 12px; max-width: 9ch; padding: 4px 2px; min-height: 28px; }
+  .center > .center-bar .btn.link { min-height: 36px; padding: 4px 6px; font-size: 13.5px; }
+}
+
+/* full-screen button */
+.btn.icon { display: inline-flex; align-items: center; justify-content: center; padding: 6px 9px; }
+.btn.icon.on { color: var(--accent); }
+
+/* phones held sideways: the whole table on one screen, your action buttons beside your hand */
+@media (max-height: 500px) and (orientation: landscape) {
+  #app { min-height: 100vh; min-height: 100dvh; max-width: none; gap: 3px; padding: 3px max(10px, env(safe-area-inset-right)) max(3px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+  .topbar { flex-wrap: nowrap; gap: 8px; }
+  .brand h1 { font-size: 18px; }
+  .scores { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow-x: auto; justify-content: center; scrollbar-width: none; gap: 4px; }
+  .scores::-webkit-scrollbar { display: none; }
+  .sc { flex: 0 0 auto; font-size: 12.5px; padding: 2px 7px; }
+  .topbar .actions { flex-wrap: nowrap; gap: 4px; }
+  .topbar .btn { min-height: 32px; padding: 4px 10px; font-size: 13px; }
+  .table { grid-template-columns: minmax(84px, 1fr) minmax(0, 5fr) minmax(84px, 1fr); grid-template-rows: auto auto; grid-template-areas: "west north east" "west center east"; gap: 0 6px; flex: 0 0 auto; }
+  .seat-west, .seat-east { align-self: center; }
+  .seat header { flex-direction: column; gap: 2px; }
+  .seat-north header { flex-direction: row; }
+  .center { grid-template-columns: auto auto minmax(0, 1fr) auto auto; grid-template-areas: "dsw dnw piles dne dse" "status status status bar bar"; column-gap: 12px; row-gap: 2px; padding: 0; }
+  .d-nw, .d-ne, .d-sw, .d-se { align-self: end; justify-self: center; }
+  .dspot { --cw: calc(34px * var(--size)); }
+  .piles { --cw: calc(38px * var(--size)); gap: 12px; }
+  .pile .lbl { font-size: 11px; }
+  .pile.discard .dlbl { font-size: 11.5px; padding: 1px 2px; min-height: 0; }
+  .status { font-size: 13.5px; justify-self: stretch; text-align: center; min-height: 0; }
+  .center > .center-bar { justify-self: end; flex-wrap: nowrap; min-height: 0; }
+  .center > .center-bar .btn { min-height: 30px; padding: 3px 10px; font-size: 13px; }
+  .log { display: none; }
+  .you { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "head tools bar" "hand hand bar" "hint hint bar"; column-gap: 10px; row-gap: 0; padding: 3px 8px; align-items: center; }
+  #you-head { grid-area: head; justify-content: flex-start; }
+  #hand-tools { grid-area: tools; justify-content: flex-start; }
+  #hand { grid-area: hand; --cw: calc(min(50px, (100vw - 290px) / 11.6, 13vh) * var(--size)); padding: 8px 0 4px; gap: 6px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; justify-content: flex-start; scrollbar-width: thin; }
+  #hand > :first-child { margin-left: auto; }
+  #hand > :last-child { margin-right: auto; }
+  #hand .card { margin-left: calc(var(--cw) * -0.46); }
+  #hand .seg { padding-left: calc(var(--cw) * 0.46); flex-wrap: nowrap; flex: 0 0 auto; }
+  #hand .seg.grp { padding: 17px 3px 3px calc(var(--cw) * 0.46 + 3px); border-radius: 9px; min-width: 0; }
+  #hand .grp-tag { top: 1px; left: 5px; font-size: 11px; }
+  #hand .grp-x { font-size: 16px; min-width: 24px; min-height: 0; }
+  #hint { grid-area: hint; font-size: 12.5px; }
+  #hint .mini-row { --cw: 16px; }
+  #bar { grid-area: bar; flex-direction: column; align-items: stretch; width: min(190px, 24vw); gap: 6px; }
+  #bar .btn { min-height: 38px; padding: 6px 10px; font-size: 13.5px; white-space: normal; line-height: 1.15; }
+  .sort-tab { min-height: 30px; padding: 4px 11px; font-size: 13px; }
+  .hand-tools .btn.link { min-height: 30px; font-size: 13px; padding: 3px 6px; }
+  .seg.grp { padding-top: 20px; }
+  .grp-tag { font-size: 11.5px; }
+  .bubble { font-size: 14px; padding: 5px 9px; }
+}
+
+/* realistic cards: printed card stock with a little grain, rounded corners, a soft gloss and real shadows */
+.card { border-radius: calc(var(--cw) * 0.075); background-color: #f8f2e4;
+  background-image: radial-gradient(120% 90% at 30% 15%, #fffdf7 0%, #f6efdf 55%, #ece2cb 100%);
+  box-shadow: 0 0 0 0.5px rgba(70, 50, 25, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.75), 0 1px 1px rgba(0, 0, 0, 0.35), 0 3px 6px -1px rgba(0, 0, 0, 0.32), 0 8px 14px -8px rgba(0, 0, 0, 0.45); }
+.card::before { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2;
+  background-image: linear-gradient(128deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 26%, rgba(255, 255, 255, 0) 45%, rgba(40, 25, 10, 0) 72%, rgba(40, 25, 10, 0.08) 100%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35  0 0 0 0 .27  0 0 0 0 .18  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.38'/%3E%3C/svg%3E");
+  background-size: 100% 100%, 160px 160px; }
+.card .face { filter: saturate(0.92) contrast(1.02); }
+.face .ix { fill: #231a12; font-size: 23px; letter-spacing: -0.5px; }
+.card.mini { border-radius: calc(var(--cw) * 0.09); box-shadow: 0 0 0 0.5px rgba(70, 50, 25, 0.55), 0 1px 2px rgba(0, 0, 0, 0.35); }
+/* the back: a white margin around a fine red lattice with a central medallion, as on Spanish packs */
+.card.back { border: calc(var(--cw) * 0.07) solid #f5eedf; background-color: #8e2329;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 90'%3E%3Cellipse cx='30' cy='45' rx='19' ry='27' fill='none' stroke='rgba(255,226,190,.55)' stroke-width='1.6'/%3E%3Cellipse cx='30' cy='45' rx='14.5' ry='22' fill='rgba(255,226,190,.12)' stroke='rgba(255,226,190,.4)' stroke-width='.8'/%3E%3Cpath d='M30 30l4 9 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z' fill='rgba(255,226,190,.45)'/%3E%3Cpath d='M30 12v6M30 72v6M8 45h5M47 45h5' stroke='rgba(255,226,190,.4)' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath d='M6 0L12 6L6 12L0 6Z' fill='none' stroke='rgba(255,226,190,.30)' stroke-width='.9'/%3E%3Ccircle cx='6' cy='6' r='1.3' fill='rgba(255,226,190,.28)'/%3E%3Ccircle cx='0' cy='0' r='.9' fill='rgba(255,226,190,.22)'/%3E%3Ccircle cx='12' cy='12' r='.9' fill='rgba(255,226,190,.22)'/%3E%3Ccircle cx='12' cy='0' r='.9' fill='rgba(255,226,190,.22)'/%3E%3Ccircle cx='0' cy='12' r='.9' fill='rgba(255,226,190,.22)'/%3E%3C/svg%3E"), radial-gradient(90% 70% at 50% 40%, #b13a40 0%, #8e2329 55%, #6b161c 100%);
+  background-size: 64% auto, calc(var(--cw) * 0.16) calc(var(--cw) * 0.16), 100% 100%; background-position: center, center, center; background-repeat: no-repeat, repeat, no-repeat;
+  box-shadow: 0 0 0 0.5px rgba(70, 50, 25, 0.6), 0 1px 1px rgba(0, 0, 0, 0.35), 0 3px 6px -1px rgba(0, 0, 0, 0.32); }
+.card.back::after { inset: 5%; border: 1px solid rgba(255, 226, 190, 0.5); border-radius: calc(var(--cw) * 0.035); box-shadow: inset 0 0 0 2px rgba(110, 20, 26, 0.6), inset 0 0 0 3px rgba(255, 226, 190, 0.22); }
+.card.back.mini { background-size: 70% auto, calc(var(--cw) * 0.2) calc(var(--cw) * 0.2), 100% 100%; }
+html[data-back="blue"] .card.back { background-color: #1f3c6c; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 90'%3E%3Cellipse cx='30' cy='45' rx='19' ry='27' fill='none' stroke='rgba(255,226,190,.55)' stroke-width='1.6'/%3E%3Cellipse cx='30' cy='45' rx='14.5' ry='22' fill='rgba(255,226,190,.12)' stroke='rgba(255,226,190,.4)' stroke-width='.8'/%3E%3Cpath d='M30 30l4 9 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z' fill='rgba(255,226,190,.45)'/%3E%3Cpath d='M30 12v6M30 72v6M8 45h5M47 45h5' stroke='rgba(255,226,190,.4)' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath d='M6 0L12 6L6 12L0 6Z' fill='none' stroke='rgba(255,226,190,.30)' stroke-width='.9'/%3E%3Ccircle cx='6' cy='6' r='1.3' fill='rgba(255,226,190,.28)'/%3E%3Ccircle cx='0' cy='0' r='.9' fill='rgba(255,226,190,.22)'/%3E%3Ccircle cx='12' cy='12' r='.9' fill='rgba(255,226,190,.22)'/%3E%3Ccircle cx='12' cy='0' r='.9' fill='rgba(255,226,190,.22)'/%3E%3Ccircle cx='0' cy='12' r='.9' fill='rgba(255,226,190,.22)'/%3E%3C/svg%3E"), radial-gradient(90% 70% at 50% 40%, #3a64a8 0%, #234479 55%, #172e55 100%); }
+html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 35, 70, 0.6), inset 0 0 0 3px rgba(255, 226, 190, 0.22); }
+.fan .card, .dstack > .card, .stack .card { box-shadow: 0 0 0 0.5px rgba(70, 50, 25, 0.6), -1px 0 2px rgba(0, 0, 0, 0.28), 0 2px 4px -1px rgba(0, 0, 0, 0.3); }
+.hand .card.selected { box-shadow: 0 0 0 2px var(--accent), 0 10px 20px rgba(0, 0, 0, 0.5); }
+.hand .card.drawn { box-shadow: 0 0 0 2px var(--good), 0 4px 12px rgba(0, 0, 0, 0.4); }
+.pile.clickable .card { box-shadow: 0 0 0 2px var(--accent), 0 6px 14px rgba(0, 0, 0, 0.45); }
+.pile.discard.clickable .card.top { box-shadow: 0 0 0 2px var(--accent), 0 6px 14px rgba(0, 0, 0, 0.45); }
+.pile.discard.clickable .card:not(.top) { box-shadow: 0 0 0 0.5px rgba(70, 50, 25, 0.6), -1px 0 2px rgba(0, 0, 0, 0.28); }
+.card.bounit { box-shadow: 0 0 0 2px var(--good), 0 0 12px var(--good); }
+.discards-box .card.latest { box-shadow: 0 0 0 2px var(--accent); }
+.card.ghost { box-shadow: 0 16px 30px rgba(0, 0, 0, 0.55), 0 0 0 2px var(--accent); }

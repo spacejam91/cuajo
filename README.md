@@ -61,17 +61,40 @@ GAMES=150 node test/engine.test.js
 ## Card art
 
 Faces are inline SVG after the Fournier "Cuajo Filipino" deck: ace numbered 1, courts 10 (sota), 11 (caballo), 12 (rey),
-frame breaks ("pintas") marking the suit, crossed swords and batons, and suit-coloured court figures.
+frame breaks ("pintas") marking the suit, crossed swords and batons, and suit-coloured court figures with patterned
+robes, ermine and shading. Cards are drawn as printed card stock: grain, rounded corners, a soft gloss and layered
+shadows, with a Spanish-style lattice back.
 
 ## Rules implemented beyond the basics
 
-- Up to 15 extra stock cards are drawn to satisfy the payment conditions when the bounit came from another player.
 - The fourth card laid with a sowee secret must still be melded to win.
 - A broken purro means two turns of shown draws with no purro or win allowed.
 - The winner deals the next hand; after a drawn hand the same player deals again.
 
-## House choices
+## House rules (family table)
 
-- When the stock is empty, the player to move may still take the last discard if it wins; otherwise the hand ends as a draw.
-- Purro and the broken-purro penalty are applied automatically.
-- Amounts are shown in pesos with the same figures as the source (₱1.10, 50 centavos per secret, and so on).
+- You can only win with a card from the stock, never with a discard. When the stock is empty the hand is a draw.
+- Pong: three or four identical cards make a combination.
+- Baksyo: a hand that holds any king must include three or four aces, or 3-4-5 or jack-horse-king of one suit.
+  A hand with no kings needs no baksyo.
+- Special king wins, for anyone, purro or not, straight from the deal or after a stock draw:
+  prinsesa (exactly four kings, one per suit), rub (three or four kings of one suit; a shown stock card can be
+  claimed as the third), seven kings. Dealt three kings of one suit, a player may win now or wait for the fourth.
+- Each player's discards sit between them and the next player; every discard can be viewed at any time.
+
+## Prices (each opponent pays the winner)
+
+| Starting price | |
+|---|---|
+| Four kings of one suit | 1,000 |
+| Prinsesa, rub, seven kings, no kings, only one king, or winning with the king that finishes a jack-horse-king baksyo | 500 |
+| Any other win (2 to 6 kings) | 200 |
+
+Plus 5 per king, 5 per 3-4-5 run, 10 per jack-horse-king run, 20 per pong, 5 for three aces, 10 for four aces,
+5 per set of four, 50 per secret and 20 per card identical to the sowee. Secrets are paid with the win.
+The winning hand is counted in the arrangement worth the most.
+
+## Taglish
+
+Card names follow the family table: Alas a Orus, Atlung Kopas, Apat a Espada, Limang Bastus, Sotang Orus,
+Kabayong Kopas, Haring Espada. The stock is the bunutan and the discards are the panugse.

@@ -16,7 +16,7 @@
   const RANK_LABEL = ['Ace', 'Three', 'Four', 'Five', 'Jack', 'Horse', 'King'];
   const RANK_ES = ['As', 'Tres', 'Cuatro', 'Cinco', 'Sota', 'Caballo', 'Rey'];
   const ACE = 0, KING = 6, NTYPES = 28, NCARDS = 112, HAND = 16;
-  const SECRET_PAY = 50; // centavos paid by each opponent for a secret
+  const SECRET_PAY = 50; // added to the win price for each secret laid down
 
   function typeOf(s, r) { return s * 7 + r; }
   function suitOf(t) { return (t / 7) | 0; }
@@ -30,9 +30,10 @@
   let CURRENCY = '\u20B1';
   /** The money symbol shown in amounts (pesos by default). */
   function setCurrency(sym) { CURRENCY = sym || '\u20B1'; }
-  function money(cents) {
-    const v = Math.abs(cents);
-    return (cents < 0 ? '\u2212' : '') + CURRENCY + (v / 100).toFixed(2);
+  /** Amounts are whole units (the house prices: 200, 500, 1000, plus 5s, 10s, 20s and 50s). */
+  function money(n) {
+    const v = Math.abs(Math.round(n));
+    return (n < 0 ? '\u2212' : '') + CURRENCY + String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
   function countsOf(ids) { const c = new Array(NTYPES).fill(0); for (const id of ids) c[cardType(id)]++; return c; }
   function sum(c) { let n = 0; for (let i = 0; i < c.length; i++) n += c[i]; return n; }
@@ -48,7 +49,8 @@
   function packHi(c) { let v = 0; for (let i = 0; i < 14; i++) v += c[i + 14] * P6[i]; return v; }
 
   const partMemo = new Map(); let partSize = 0;
-  /** True if every card in `counts` (28 ints) can be arranged into valid combinations. */
+  /** True if every card in `counts` (28 ints) can be arranged into valid combinations:
+      sets (3-4 of a rank in different suits), pongs (3-4 identical cards), runs (3-4-5, J-H-K in one suit), lone kings. */
   function canPartition(counts) {
     const c = counts.slice();
     let lo = packLo(c), hi = packHi(c);
@@ -63,6 +65,7 @@
       const s = suitOf(t), r = rankOf(t);
       if (r === KING) { dec(t); ok = rec(t); inc(t); }
       if (!ok && c[t] >= 4) { dec(t); dec(t); dec(t); dec(t); ok = rec(t); inc(t); inc(t); inc(t); inc(t); }
+      if (!ok && c[t] >= 3) { dec(t); dec(t); dec(t); ok = rec(t); inc(t); inc(t); inc(t); }          // pong
       if (!ok) {
         const o = [];
         for (let s2 = 0; s2 < 4; s2++) if (s2 !== s && c[typeOf(s2, r)] > 0) o.push(typeOf(s2, r));
@@ -99,7 +102,8 @@
       };
       let res = null;
       if (r === KING) res = attempt([t], 'king');
-      if (!res && c[t] >= 4) res = attempt([t, t, t, t], 'secret');
+      if (!res && c[t] >= 4) res = attempt([t, t, t, t], 'pong');
+      if (!res && c[t] >= 3) res = attempt([t, t, t], 'pong');
       if (!res) {
         const o = [];
         for (let s2 = 0; s2 < 4; s2++) if (s2 !== s && c[typeOf(s2, r)] > 0) o.push(typeOf(s2, r));
@@ -121,19 +125,19 @@
     for (let s2 = 0; s2 < 4; s2++) if (s2 !== s && c[typeOf(s2, r)] > 0) o.push(typeOf(s2, r));
     // complete groups
     if (r === KING) ops.push({ types: [t], used: 1, kind: 'king' });
-    if (c[t] >= 4) ops.push({ types: [t, t, t, t], used: 4, kind: 'secret' });
+    if (c[t] >= 4) ops.push({ types: [t, t, t, t], used: 4, kind: 'pong' });
+    if (c[t] >= 3) ops.push({ types: [t, t, t], used: 3, kind: 'pong' });
     if (o.length === 3) ops.push({ types: [t, o[0], o[1], o[2]], used: 4, kind: 'set' });
     for (let i = 0; i < o.length; i++) for (let j = i + 1; j < o.length; j++) ops.push({ types: [t, o[i], o[j]], used: 3, kind: 'set' });
     if ((r === 1 || r === 4) && c[t + 1] > 0 && c[t + 2] > 0) ops.push({ types: [t, t + 1, t + 2], used: 3, kind: 'run' });
     // partial groups (one card short)
-    if (c[t] >= 3) ops.push({ types: [t, t, t], used: 4, kind: 'secret3' });
+    if (c[t] >= 2) ops.push({ types: [t, t], used: 3, kind: 'pong2' });
     for (let i = 0; i < o.length; i++) ops.push({ types: [t, o[i]], used: 3, kind: 'set2' });
     if (r === 1 || r === 2 || r === 4 || r === 5) {
       const top = r <= 3 ? 3 : 6;
       for (let r2 = r + 1; r2 <= top; r2++) if (c[typeOf(s, r2)] > 0) ops.push({ types: [t, typeOf(s, r2)], used: 3, kind: 'run2' });
     }
-    if (c[t] >= 2) ops.push({ types: [t, t], used: 4, kind: 'secret2' });
-    // a single card kept as the start of a future set/run
+    // a single card kept as the start of a future combination
     if (r !== KING) ops.push({ types: [t], used: 3, kind: 'seed' });
     // give the card up
     ops.push({ types: [t], used: 0, kind: 'drop', kept: 0 });
@@ -143,7 +147,7 @@
 
   const keepMemo = new Map(); let keepSize = 0;
   /** Max number of cards of the hand that can be part of a complete hand using at most `slots` of its 16 places.
-      Same option set as optionsAt(), written out inline for speed. */
+      Same option set as optionsAt(), written out inline for speed. (No baksyo requirement; see bestKeepB.) */
   function bestKeep(counts, slots) {
     const c = counts.slice();
     let lo = packLo(c), hi = packHi(c);
@@ -160,11 +164,11 @@
       dec(t); best = rec(t, sl); inc(t);                                              // drop
       if (r === KING) { dec(t); v = 1 + rec(t, sl - 1); inc(t); if (v > best) best = v; }   // lone king
       else if (sl >= 3) { dec(t); v = 1 + rec(t, sl - 3); inc(t); if (v > best) best = v; } // seed
-      if (sl >= 4) {                                                                   // toward a secret
-        if (c[t] >= 2) { dec(t); dec(t); v = 2 + rec(t, sl - 4); inc(t); inc(t); if (v > best) best = v; }
-        if (c[t] >= 3) { dec(t); dec(t); dec(t); v = 3 + rec(t, sl - 4); inc(t); inc(t); inc(t); if (v > best) best = v; }
-        if (c[t] >= 4) { dec(t); dec(t); dec(t); dec(t); v = 4 + rec(t, sl - 4); inc(t); inc(t); inc(t); inc(t); if (v > best) best = v; }
+      if (sl >= 3) {                                                                   // pongs (identical cards)
+        if (c[t] >= 2) { dec(t); dec(t); v = 2 + rec(t, sl - 3); inc(t); inc(t); if (v > best) best = v; }
+        if (c[t] >= 3) { dec(t); dec(t); dec(t); v = 3 + rec(t, sl - 3); inc(t); inc(t); inc(t); if (v > best) best = v; }
       }
+      if (sl >= 4 && c[t] >= 4) { dec(t); dec(t); dec(t); dec(t); v = 4 + rec(t, sl - 4); inc(t); inc(t); inc(t); inc(t); if (v > best) best = v; }
       if (sl >= 3) {
         let o0 = -1, o1 = -1, o2 = -1, no = 0;
         for (let s2 = 0; s2 < 4; s2++) if (s2 !== s) { const u = typeOf(s2, r); if (c[u] > 0) { if (no === 0) o0 = u; else if (no === 1) o1 = u; else o2 = u; no++; } }
@@ -190,9 +194,6 @@
     return rec(0, slots);
   }
 
-  /** Cards still needed to complete the hand (a hand of slots-1 cards is 1 away when purro). */
-  function distance(counts, slots) { return slots - bestKeep(counts, slots); }
-
   /** The grouping behind bestKeep: [{types, kind}] covering every card (kind 'drop' = not kept). */
   function keepPlan(counts, slots) {
     const c = counts.slice(); const groups = [];
@@ -218,57 +219,105 @@
     return groups;
   }
 
-  /** Cards still needed to complete the hand (a hand of slots-1 cards is 1 away when purro). */
-  function distance(counts, slots) { return slots - bestKeep(counts, slots); }
-
-  /** The grouping behind bestKeep: [{types, kind}] covering every card (kind 'drop' = not kept). */
-  function keepPlan(counts, slots) {
-    const c = counts.slice(); const groups = [];
-    let from = 0, sl = slots;
-    for (;;) {
-      let t = from; while (t < NTYPES && c[t] === 0) t++;
-      if (t === NTYPES) break;
-      if (sl === 0) { for (let x = t; x < NTYPES; x++) for (let k = 0; k < c[x]; k++) groups.push({ types: [x], kind: 'drop' }); break; }
-      const target = bestKeep(c, sl);
-      let chosen = null;
-      for (const op of optionsAt(c, t)) {
-        if (op.used > sl) continue;
-        for (const x of op.types) c[x]--;
-        const v = op.kept + bestKeep(c, sl - op.used);
-        for (const x of op.types) c[x]++;
-        if (v === target) { chosen = op; break; }
-      }
-      for (const x of chosen.types) c[x]--;
-      sl -= chosen.used;
-      groups.push({ types: chosen.types.slice(), kind: chosen.kind });
-      from = t;
-    }
-    return groups;
+  // ---------- baksyo: every winning hand needs one (house rule) ----------
+  // A baksyo is three or four aces (a set of aces, or a pong of identical aces), or a 3-4-5 or
+  // jack-horse-king (10-11-12) run in one suit. A secret of aces laid on the table also counts.
+  const BAKSYO = (() => {
+    const out = [];
+    for (let s = 0; s < 4; s++) { out.push([typeOf(s, 1), typeOf(s, 2), typeOf(s, 3)]); out.push([typeOf(s, 4), typeOf(s, 5), typeOf(s, 6)]); }
+    const A = [0, 1, 2, 3].map(s => typeOf(s, ACE));
+    for (let skip = 0; skip < 4; skip++) out.push(A.filter((x, i) => i !== skip));
+    out.push(A.slice());
+    for (const a of A) { out.push([a, a, a]); out.push([a, a, a, a]); }
+    return out.map(types => { const need = {}; for (const t of types) need[t] = (need[t] || 0) + 1; return { types, need: Object.keys(need).map(k => [+k, need[k]]) }; });
+  })();
+  function hasAll(c, B) { return B.need.every(p => c[p[0]] >= p[1]); }
+  /** True when the cards (a multiset of types) are exactly one baksyo group. */
+  function isBaksyo(types) {
+    const c = countsOf([]); for (const t of types) c[t]++;
+    return BAKSYO.some(B => B.types.length === types.length && hasAll(c, B));
   }
+  function baksyoKind(types) { if (rankOf(types[0]) !== ACE) return 'run'; return types.every(x => x === types[0]) ? 'pong' : 'set'; }
+  /** House rule: a hand with no kings at all does not need a baksyo; any king makes the baksyo required. */
+  function anyKing(counts) { for (let s = 0; s < 4; s++) if (counts[typeOf(s, KING)] > 0) return true; return false; }
+  function needsBaksyo(counts, hasB) { return !hasB && anyKing(counts); }
+  /** A complete hand under the house rules: valid combinations, including a baksyo when the hand holds a king
+      (unless a laid secret of aces already is the baksyo). */
+  function completeB(counts, hasB) {
+    if (!needsBaksyo(counts, hasB)) return canPartition(counts);
+    const c = counts.slice();
+    for (const B of BAKSYO) {
+      if (!hasAll(c, B)) continue;
+      for (const p of B.need) c[p[0]] -= p[1];
+      const ok = canPartition(c);
+      for (const p of B.need) c[p[0]] += p[1];
+      if (ok) return true;
+    }
+    return false;
+  }
+  /** One arrangement of a winning hand, with its baksyo group first (marked baksyo: true). */
+  function partitionB(counts, hasB) {
+    if (!needsBaksyo(counts, hasB)) return partition(counts);
+    const c = counts.slice();
+    for (const B of BAKSYO) {
+      if (!hasAll(c, B)) continue;
+      for (const p of B.need) c[p[0]] -= p[1];
+      const rest = canPartition(c) ? partition(c) : null;
+      for (const p of B.need) c[p[0]] += p[1];
+      if (rest) return [{ types: B.types.slice(), kind: baksyoKind(B.types), baksyo: true }].concat(rest);
+    }
+    return null;
+  }
+  // Planning with the requirement: commit to the most promising baksyo group, plan the other cards freely.
+  function bestBaksyo(counts, slots) {
+    const c = counts.slice(); let best = null, zeroDone = false;
+    for (const B of BAKSYO) {
+      if (B.types.length > slots) continue;
+      let k = 0; const got = [];
+      for (const p of B.need) { const h = Math.min(c[p[0]], p[1]); if (h) { got.push([p[0], h]); k += h; } }
+      if (!k) { if (B.types.length !== 3 || zeroDone) continue; zeroDone = true; }
+      for (const p of got) c[p[0]] -= p[1];
+      const v = k + bestKeep(c, slots - B.types.length);
+      for (const p of got) c[p[0]] += p[1];
+      if (!best || v > best.v) best = { v, B, got, k };
+    }
+    return best;
+  }
+  function bestKeepB(counts, slots, hasB) {
+    if (!needsBaksyo(counts, hasB) || slots < 3) return bestKeep(counts, slots);
+    const b = bestBaksyo(counts, slots);
+    return b ? b.v : bestKeep(counts, slots);
+  }
+  /** Cards still needed to complete the hand (a hand of slots-1 cards is 1 away when purro). */
+  function distance(counts, slots, hasB) { return slots - bestKeepB(counts, slots, hasB); }
+  /** The grouping behind distance(): the chosen baksyo group (whole or in part) first, then the rest. */
+  function keepPlanB(counts, slots, hasB) {
+    if (!needsBaksyo(counts, hasB) || slots < 3) return keepPlan(counts, slots);
+    const b = bestBaksyo(counts, slots);
+    if (!b) return keepPlan(counts, slots);
+    const c = counts.slice(); const types = [];
+    for (const p of b.got) { c[p[0]] -= p[1]; for (let i = 0; i < p[1]; i++) types.push(p[0]); }
+    const rest = keepPlan(c, slots - b.B.types.length);
+    if (!types.length) return rest;
+    const whole = canPartition(countsOfTypes(types));
+    const kind = whole ? baksyoKind(types) : types.length === 1 ? 'seed' : rankOf(types[0]) !== ACE ? 'run2' : types[0] === types[1] ? 'pong2' : 'set2';
+    return [{ types, kind, baksyo: true }].concat(rest);
+  }
+  function countsOfTypes(types) { const c = countsOf([]); for (const t of types) c[t]++; return c; }
 
   /** Types that would complete a hand of slots-1 cards. Non-empty means the player is "purro". */
-  function waitingTypes(counts, slots) {
+  function waitingTypes(counts, slots, hasB) {
     if (sum(counts) !== slots - 1) return [];
     const res = [];
-    for (let t = 0; t < NTYPES; t++) { counts[t]++; if (canPartition(counts)) res.push(t); counts[t]--; }
+    for (let t = 0; t < NTYPES; t++) { if (counts[t] >= 4) continue; counts[t]++; if (completeB(counts, hasB)) res.push(t); counts[t]--; }
     return res;
   }
 
   /** Types that bring a hand of slots-1 cards closer to completion. */
-  function usefulTypes(counts, slots) {
-    const base = bestKeep(counts, slots); const res = [];
-    for (let t = 0; t < NTYPES; t++) { if (counts[t] >= 4) continue; counts[t]++; if (bestKeep(counts, slots) > base) res.push(t); counts[t]--; }
+  function usefulTypes(counts, slots, hasB) {
+    const base = bestKeepB(counts, slots, hasB); const res = [];
+    for (let t = 0; t < NTYPES; t++) { if (counts[t] >= 4) continue; counts[t]++; if (bestKeepB(counts, slots, hasB) > base) res.push(t); counts[t]--; }
     return res;
-  }
-
-  /** Best distance reachable from a full hand (slots cards) by discarding one non-king card. */
-  function bestDiscardDistance(c, slots) {
-    let best = Infinity;
-    for (let d = 0; d < NTYPES; d++) if (c[d] > 0 && !isKingType(d)) {
-      c[d]--; const v = distance(c, slots); c[d]++;
-      if (v < best) best = v;
-    }
-    return best;
   }
 
   // ---------- Game state ----------
@@ -318,10 +367,45 @@
     }
     g.sowee = deck.pop(); markSeen(g, g.sowee);
     g.stock = deck; // top of the stock = last element
-    g.turn = g.dealer; g.phase = 'discard'; g.turnCount = 0;
+    g.turn = g.dealer; g.phase = 'discard'; g.turnCount = 0; g.rubWait = [false, false, false, false]; g.rubOffer = null;
     log(g, 'Hand ' + g.handNo + ': ' + g.names[g.dealer] + ' deals. The sowee is the ' + cardName(cardType(g.sowee)) + '.', 'deal');
-    if (isComplete(g, g.dealer)) finishWin(g, g.dealer, 'deal', null);
+    dealChecks(g, 0);
     return g;
+  }
+  /** Seven kings, prinsesa or rub straight from the deal, then a dealer complete as dealt.
+      Three kings of one suit in the dealt cards: the player chooses to win now or wait for the fourth (house rule). */
+  function dealChecks(g, k0) {
+    for (let k = k0; k < 4; k++) {
+      const seat = (g.dealer + k) % 4, kw = kingWin(g, seat);
+      if (!kw) continue;
+      if (kw === 'rub' && maxSameKing(g, seat) === 3) {
+        let type = null; for (let s = 0; s < 4; s++) if (kingCount(g, seat, typeOf(s, KING)) === 3) type = typeOf(s, KING);
+        g.phase = 'rubOffer'; g.rubOffer = { seat, k, type }; return;
+      }
+      finishWin(g, seat, 'deal', null, kw); return;
+    }
+    g.phase = 'discard'; g.turn = g.dealer;
+    if (isComplete(g, g.dealer)) finishWin(g, g.dealer, 'deal', null);
+  }
+  /** The player dealt three kings of one suit wins now (rub) or waits for the fourth king. */
+  function resolveRub(g, win) {
+    assert(g.phase === 'rubOffer' && g.rubOffer, 'no rub choice pending');
+    const o = g.rubOffer; g.rubOffer = null;
+    if (win) { finishWin(g, o.seat, 'deal', null, 'rub'); return; }
+    g.rubWait[o.seat] = true;
+    dealChecks(g, o.k + 1);
+  }
+  /** While waiting for the fourth king, the player may still take the rub on any of their turns. */
+  function declareRub(g, seat) {
+    assert(legalActions(g, seat).declareRub, 'no rub to declare');
+    finishWin(g, seat, g.phase === 'discard' && g.drawn != null ? (g.drawnFrom || 'stock') : 'deal', g.phase === 'discard' ? g.drawn : null, 'rub');
+  }
+  function maxSameKing(g, seat) { let m = 0; for (let s = 0; s < 4; s++) m = Math.max(m, kingCount(g, seat, typeOf(s, KING))); return m; }
+  /** A special king win that takes effect now; a player waiting for the fourth king is not forced to take the rub. */
+  function specialNow(g, seat) {
+    const kw = kingWin(g, seat);
+    if (kw === 'rub' && g.rubWait && g.rubWait[seat] && maxSameKing(g, seat) < 4) return null;
+    return kw;
   }
 
   function nextHand(g) { g.dealer = g.nextDealer; return startHand(g); }
@@ -336,11 +420,39 @@
   function poolCounts(g, seat) { return countsOf(poolIds(g, seat)); }
   /** How many of the 16 places are not yet filled by laid secrets (a four-card secret fills 4, a sowee secret 3). */
   function slotsFor(g, seat) { let n = HAND; for (const s of g.secrets[seat]) n -= s.kind === 'four' ? 4 : 3; return n; }
-  function isComplete(g, seat) { return poolIds(g, seat).length === slotsFor(g, seat) && canPartition(poolCounts(g, seat)); }
+  /** A secret of aces laid on the table already counts as the hand's baksyo. */
+  function secretB(g, seat) { return g.secrets[seat].some(s => rankOf(s.type) === ACE); }
+  function isComplete(g, seat) { return poolIds(g, seat).length === slotsFor(g, seat) && completeB(poolCounts(g, seat), secretB(g, seat)); }
   function completesWith(g, seat, t) {
     if (poolIds(g, seat).length + 1 !== slotsFor(g, seat)) return false;
-    const c = poolCounts(g, seat); c[t]++; return canPartition(c);
+    const c = poolCounts(g, seat); c[t]++; return completeB(c, secretB(g, seat));
   }
+  /** Special wins with kings (house rules), open to every player, purro or not, and paid double:
+      seven kings = any seven kings; prinsesa = exactly four kings, one of each suit, and no other kings;
+      rub = three or four kings of the same suit.
+      They count at any time (as dealt or straight after a stock draw), in the hand or in laid secrets. */
+  function kingCount(g, seat, t) {
+    let n = 0; for (const id of poolIds(g, seat)) if (cardType(id) === t) n++;
+    for (const s of g.secrets[seat]) for (const id of s.cards) if (cardType(id) === t) n++;
+    return n;
+  }
+  function kingWin(g, seat) {
+    const ids = poolIds(g, seat); for (const s of g.secrets[seat]) ids.push(...s.cards);
+    const suits = new Set(), per = {}; let n = 0, most = 0;
+    for (const id of ids) { const t = cardType(id); if (isKingType(t)) { n++; suits.add(suitOf(t)); per[t] = (per[t] || 0) + 1; most = Math.max(most, per[t]); } }
+    if (n >= 7) return 'sevenkings';
+    if (n === 4 && suits.size === 4) return 'prinsesa';
+    if (most >= 3) return 'rub';
+    return null;
+  }
+  /** Rub from a shown stock card: another player holding two of that king claims the third and wins. */
+  function rubClaimant(g, seat, id) {
+    const t = cardType(id); if (!isKingType(t)) return null;
+    for (let k = 1; k < 4; k++) { const p = (seat + k) % 4; if (kingCount(g, p, t) >= 2) return p; }
+    return null;
+  }
+  /** The grouping the hints and Auto-group use for a seat. */
+  function planFor(g, seat) { return keepPlanB(poolCounts(g, seat), slotsFor(g, seat), secretB(g, seat)); }
   function topDiscard(g) { return g.discards.length ? g.discards[g.discards.length - 1] : null; }
   function purroAmongOthers(g, seat) { for (let p = 0; p < 4; p++) if (p !== seat && g.purro[p]) return true; return false; }
   function currentClaimant(g) { return g.timeOffer ? g.timeOffer.claimants[g.timeOffer.index] : null; }
@@ -349,11 +461,14 @@
 
   /** What `seat` may do right now. */
   function legalActions(g, seat) {
-    const a = { drawStock: false, takeDiscard: false, endHand: false, discard: false, secrets: [], timeClaim: false };
+    const a = { drawStock: false, takeDiscard: false, endHand: false, discard: false, secrets: [], timeClaim: false, rubChoice: false, declareRub: false };
+    if (g.phase === 'rubOffer' && g.rubOffer && g.rubOffer.seat === seat) { a.rubChoice = true; return a; }
+    if (g.rubWait && g.rubWait[seat] && g.turn === seat && (g.phase === 'draw' || g.phase === 'discard') && maxSameKing(g, seat) >= 3) a.declareRub = true;
     if (g.phase === 'draw' && g.turn === seat) {
       const top = topDiscard(g);
       a.drawStock = g.stock.length > 0;
-      a.takeDiscard = top != null && (g.stock.length > 0 || (mayWin(g, seat) && completesWith(g, seat, cardType(top))));
+      // House rule: you only win with a card from the stock, so a discard that would complete your hand stays on the pile.
+      a.takeDiscard = top != null && g.stock.length > 0 && !completesWith(g, seat, cardType(top));
       a.endHand = g.stock.length === 0;
     } else if (g.phase === 'discard' && g.turn === seat) {
       a.discard = true;
@@ -373,8 +488,17 @@
     g.lastShown = shown ? { seat, id } : null;
     if (shown) { markSeen(g, id); log(g, g.names[seat] + ' draws the ' + cardName(cardType(id)) + ' and shows it' + (g.penalty[seat] > 0 ? ' (the turns after a broken purro)' : ' (someone is purro)') + '.', 'draw'); }
     else log(g, g.names[seat] + ' draws from the stock.', 'draw');
-    if (mayWin(g, seat) && isComplete(g, seat)) { finishWin(g, seat, 'stock', id); return; }
+    const kw = specialNow(g, seat);
+    if (kw) { finishWin(g, seat, 'stock', id, kw); return; }
+    if (mayWin(g, seat) && isComplete(g, seat)) { finishWin(g, seat, 'stock', id, kingWin(g, seat) || undefined); return; }
     if (shown) {
+      const rp = rubClaimant(g, seat, id);
+      if (rp != null) {
+        const h = g.hands[seat]; h.splice(h.indexOf(id), 1);
+        g.hands[rp].push(id); g.drawn = id; g.drawnFrom = 'claim';
+        log(g, g.names[rp] + ' claims the shown ' + cardName(cardType(id)) + ' for a rub.', 'time');
+        finishWin(g, rp, 'claim', id, 'rub'); return;
+      }
       const t = cardType(id), claimants = [];
       for (let k = 1; k < 4; k++) { const p = (seat + k) % 4; if (g.purro[p] && g.waiting[p].indexOf(t) >= 0) claimants.push(p); }
       if (claimants.length) { g.phase = 'timeOffer'; g.timeOffer = { card: id, from: seat, claimants, index: 0 }; }
@@ -389,7 +513,7 @@
       const h = g.hands[o.from]; h.splice(h.indexOf(o.card), 1);
       g.hands[p].push(o.card); g.drawn = o.card; g.drawnFrom = 'time'; g.timeOffer = null;
       log(g, g.names[p] + ' says "time!" and claims the ' + cardName(cardType(o.card)) + '.', 'time');
-      finishWin(g, p, 'time', o.card);
+      finishWin(g, p, 'time', o.card, kingWin(g, p) || undefined);   // a complete hand that also holds a rub is paid as the rub
     } else {
       log(g, g.names[p] + ' lets the ' + cardName(cardType(o.card)) + ' go.', 'time');
       o.index++;
@@ -401,11 +525,12 @@
     assert(g.phase === 'draw' && g.turn === seat, 'not your turn to draw');
     const top = topDiscard(g);
     assert(top != null, 'nothing to take');
-    if (g.stock.length === 0) assert(mayWin(g, seat) && completesWith(g, seat, cardType(top)), 'with the stock empty the last discard may only be taken to win');
+    assert(g.stock.length > 0, 'the stock is empty');
+    assert(!completesWith(g, seat, cardType(top)), 'you can only win with a card from the stock, not with a discard');
     const id = g.discards.pop(); g.discardedBy.pop();
+    for (let i = g.history.length - 1; i >= 0; i--) if (g.history[i].id === id) { g.history[i].takenBy = seat; break; }
     g.hands[seat].push(id); g.drawn = id; g.drawnFrom = 'discard'; g.phase = 'discard';
     log(g, g.names[seat] + ' takes the ' + cardName(cardType(id)) + ' from the discard pile.', 'draw');
-    if (mayWin(g, seat) && isComplete(g, seat)) finishWin(g, seat, 'discard', id);
   }
 
   /** Secrets `seat` could lay down now: four identical cards, or the three cards identical to the sowee plus any fourth card. */
@@ -430,9 +555,9 @@
       h.splice(h.indexOf(extraId), 1); extra = extraId;
     }
     g.secrets[seat].push({ cards, kind: opt.kind, type, extra });
-    for (const p of opponentsOf(seat)) { g.balances[p] -= SECRET_PAY; g.balances[seat] += SECRET_PAY; }
-    log(g, g.names[seat] + ' lays down a secret' + (opt.kind === 'sowee' ? ' (the three cards matching the sowee, with a fourth card that still has to be melded)' : '') + ' and collects ' + money(SECRET_PAY) + ' from each opponent.', 'secret');
-    if (mayWin(g, seat) && isComplete(g, seat)) finishWin(g, seat, g.drawnFrom || 'deal', g.drawn);
+    // House pricing: a secret is paid with the win (50 each), not when it is laid down.
+    log(g, g.names[seat] + ' lays down a secret' + (opt.kind === 'sowee' ? ' (the three cards matching the sowee, with a fourth card that still has to be melded)' : '') + '.', 'secret');
+    if (mayWin(g, seat) && isComplete(g, seat)) finishWin(g, seat, g.drawnFrom || 'deal', g.drawn, kingWin(g, seat) || undefined);
   }
 
   function discard(g, seat, id) {
@@ -440,7 +565,7 @@
     const h = g.hands[seat], i = h.indexOf(id);
     assert(i >= 0, 'card not in hand');
     assert(!isKing(id), 'kings may not be discarded');
-    h.splice(i, 1); g.discards.push(id); g.discardedBy.push(seat); g.history.push({ seat, type: cardType(id) }); markSeen(g, id);
+    h.splice(i, 1); g.discards.push(id); g.discardedBy.push(seat); g.history.push({ seat, type: cardType(id), id }); markSeen(g, id);
     g.drawn = null; g.drawnFrom = null; g.lastShown = null;
     log(g, g.names[seat] + ' discards the ' + cardName(cardType(id)) + '.', 'discard');
     if (g.penalty[seat] > 0) {
@@ -452,7 +577,7 @@
 
   function updatePurro(g, seat) {
     const c = poolCounts(g, seat), slots = slotsFor(g, seat);
-    const w = waitingTypes(c, slots), was = g.purro[seat];
+    const w = waitingTypes(c, slots, secretB(g, seat)), was = g.purro[seat];
     g.waiting[seat] = w; g.purro[seat] = w.length > 0;
     if (g.purro[seat]) {
       let m = null; for (const id of g.hands[seat]) if (isKing(id)) { m = id; break; }
@@ -480,54 +605,136 @@
     return true;
   }
 
-  function finishWin(g, seat, source, bounitId) {
-    const pool = poolCounts(g, seat);
-    const groups = partition(pool) || [];
+  // ---------- Pricing (house rules) ----------
+  // Each opponent pays a starting price plus points for what the winning hand holds.
+  const PRICE = { fourKings: 1000, top: 500, regular: 200, king: 5, baksyo: 5, kingBaksyo: 10, pong: 20, fourAces: 10, threeAces: 5, setOfFour: 5, secret: 50, sowee: 20 };
+  /** Points one combination adds (kings are counted separately, 5 each). Every run is a baksyo:
+      3-4-5 adds 5, jack-horse-king (a king used as the baksyo) adds 10. */
+  function groupPoints(gp) {
+    const n = gp.types.length, r = Math.min(...gp.types.map(rankOf));
+    if (gp.kind === 'run') return r === 1 ? PRICE.baksyo : PRICE.kingBaksyo;
+    const aces = r === ACE ? (n >= 4 ? PRICE.fourAces : PRICE.threeAces) : 0;
+    if (gp.kind === 'pong') return PRICE.pong + aces;
+    if (gp.kind === 'set') return r === ACE ? aces : n >= 4 ? PRICE.setOfFour : 0;
+    return 0;
+  }
+  /** The arrangement of the cards worth the most points. needB: it must include a baksyo;
+      loose: cards may be left over (special king wins come before the hand is finished). */
+  function bestScoring(counts, needB, loose) {
+    const c = counts.slice(), memo = new Map();
+    function rec(gotB) {
+      let t = 0; while (t < NTYPES && c[t] === 0) t++;
+      if (t === NTYPES) return needB && !gotB ? null : { pts: 0, groups: [] };
+      const key = c.join('') + (gotB ? 'b' : '');
+      if (memo.has(key)) return memo.get(key);
+      let best = null;
+      const s = suitOf(t), r = rankOf(t);
+      const tryG = (types, kind) => {
+        for (const x of types) c[x]--;
+        const gp = { types: types.slice(), kind };
+        const sub = rec(gotB || (kind !== 'king' && isBaksyo(types)));
+        for (const x of types) c[x]++;
+        if (sub) { const pts = groupPoints(gp) + sub.pts; if (!best || pts > best.pts) best = { pts, groups: [gp].concat(sub.groups) }; }
+      };
+      if (r === KING) tryG([t], 'king');                // kings stand alone (or sit in a jack-horse-king run)
+      else {
+        if (c[t] >= 4) tryG([t, t, t, t], 'pong');
+        if (c[t] >= 3) tryG([t, t, t], 'pong');
+        const o = [];
+        for (let s2 = s + 1; s2 < 4; s2++) if (c[typeOf(s2, r)] > 0) o.push(typeOf(s2, r));
+        for (let a = 0; a < o.length; a++) for (let b = a + 1; b < o.length; b++) {
+          tryG([t, o[a], o[b]], 'set');
+          for (let d = b + 1; d < o.length; d++) tryG([t, o[a], o[b], o[d]], 'set');
+        }
+        if ((r === 1 || r === 4) && c[t + 1] > 0 && c[t + 2] > 0) tryG([t, t + 1, t + 2], 'run');
+      }
+      if (loose) { c[t]--; const sub = rec(gotB); c[t]++; if (sub && (!best || sub.pts > best.pts)) best = sub; }
+      memo.set(key, best);
+      return best;
+    }
+    return rec(false);
+  }
+  /** Price of a win for `seat`: starting price + kings + combinations + secrets. */
+  function priceWin(g, seat, special, bounitId) {
+    const pool = poolCounts(g, seat), hb = secretB(g, seat);
     const secretCards = []; for (const s of g.secrets[seat]) for (const id of s.cards) secretCards.push(id);
-    const allIds = poolIds(g, seat).concat(secretCards);           // the winner's sixteen cards
-    const all = countsOf(allIds);
-    let kings = 0, kingsValue = 0;
-    for (const id of allIds) { const t = cardType(id); if (isKingType(t)) { kings++; kingsValue += suitOf(t) === 0 ? 50 : 20; } }
-    // porbis: no kings, or a single king that sits in a jack-horse-king run
-    let porbis = kings === 0;
-    if (kings === 1) {
-      const kt = allIds.map(cardType).filter(isKingType)[0];
-      if (pool[kt] === 1) {
-        const s = suitOf(kt), J = typeOf(s, 4), H = typeOf(s, 5);
-        if (pool[J] > 0 && pool[H] > 0) { const c2 = pool.slice(); c2[J]--; c2[H]--; c2[kt]--; if (canPartition(c2)) porbis = true; }
-      }
-    }
-    const sw = cardType(g.sowee);
+    const all = countsOf(poolIds(g, seat).concat(secretCards));
+    let kings = 0, sameKing = 0;
+    for (let s = 0; s < 4; s++) { const k = all[typeOf(s, KING)]; kings += k; sameKing = Math.max(sameKing, k); }
+    let best = bestScoring(pool, !special && needsBaksyo(pool, hb), !!special) || { pts: 0, groups: [] };
+    // House rule: winning with the king that finishes a jack-horse-king baksyo (any suit) also starts at 500.
+    let kingBaksyo = false;
     const bt = bounitId != null ? cardType(bounitId) : null;
-    const fromStock = source === 'stock' || source === 'deal';
-    let cond1 = bt != null && goesWith(all, bt);
-    let cond2 = all[sw] > 0 && goesWith(all, sw);
-    // A bounit obtained from another player: if the conditions are not met from the hand, up to 15 extra
-    // cards may be drawn from the stock to satisfy them (they need not be melded and add no king value).
-    const extraDraws = [];
-    if (!porbis && !fromStock && !(cond1 && cond2)) {
-      while (extraDraws.length < 15 && g.stock.length) {
-        const id = g.stock.pop(); extraDraws.push(id); all[cardType(id)]++;
-        cond1 = bt != null && goesWith(all, bt); cond2 = all[sw] > 0 && goesWith(all, sw);
-        if (cond1 && cond2) break;
+    if (!special && bt != null && isKingType(bt) && kings > 1 && sameKing < 4) {
+      const J = typeOf(suitOf(bt), 4), H = typeOf(suitOf(bt), 5);
+      if (pool[J] > 0 && pool[H] > 0 && pool[bt] > 0) {
+        const rest = pool.slice(); rest[J]--; rest[H]--; rest[bt]--;
+        const sub = bestScoring(rest, false, false);
+        if (sub) {
+          const run = { types: [J, H, bt], kind: 'run' };
+          best = { pts: groupPoints(run) + sub.pts, groups: [run].concat(sub.groups) };
+          kingBaksyo = true;
+        }
       }
     }
-    const base = (fromStock || (cond1 && cond2)) ? 110 : cond1 ? 60 : cond2 ? 70 : 20;
-    const per = porbis ? 300 : base + kingsValue;
+    const groups = best.groups.slice();
+    // anything a special win leaves unmelded is shown as the rest of the hand
+    const left = pool.slice(); for (const gp of groups) for (const t of gp.types) left[t]--;
+    const leftTypes = []; for (let t = 0; t < NTYPES; t++) for (let i = 0; i < left[t]; i++) leftTypes.push(t);
+    groups.sort((a, b) => (a.kind === 'king') - (b.kind === 'king'));
+    if (!special) { const bi = kingBaksyo ? 0 : groups.findIndex(gp => gp.kind !== 'king' && isBaksyo(gp.types)); if (bi >= 0) groups[bi] = Object.assign({}, groups[bi], { baksyo: true }); }
+    if (leftTypes.length) groups.push({ types: leftTypes, kind: 'rest' });
+    const count = { run345: 0, runJHK: 0, pong: 0, fourAces: 0, threeAces: 0, setOfFour: 0 };
+    for (const gp of best.groups) {
+      const n = gp.types.length, r = Math.min(...gp.types.map(rankOf));
+      if (gp.kind === 'run') { if (r === 1) count.run345++; else count.runJHK++; }
+      if (gp.kind === 'pong') count.pong++;
+      if ((gp.kind === 'pong' || gp.kind === 'set') && r === ACE) { if (n >= 4) count.fourAces++; else count.threeAces++; }
+      if (gp.kind === 'set' && r !== ACE && n >= 4) count.setOfFour++;
+    }
+    const startKind = sameKing >= 4 ? 'fourKings' : special ? special : kings === 0 ? 'nokings' : kings === 1 ? 'oneking' : kingBaksyo ? 'kingBaksyo' : 'regular';
+    const start = sameKing >= 4 ? PRICE.fourKings : (special || kings <= 1 || kingBaksyo) ? PRICE.top : PRICE.regular;
+    const items = [
+      { key: 'kings', count: kings, each: PRICE.king },
+      { key: 'run345', count: count.run345, each: PRICE.baksyo },
+      { key: 'runJHK', count: count.runJHK, each: PRICE.kingBaksyo },
+      { key: 'pong', count: count.pong, each: PRICE.pong },
+      { key: 'fourAces', count: count.fourAces, each: PRICE.fourAces },
+      { key: 'threeAces', count: count.threeAces, each: PRICE.threeAces },
+      { key: 'setOfFour', count: count.setOfFour, each: PRICE.setOfFour },
+      { key: 'secrets', count: g.secrets[seat].length, each: PRICE.secret },
+      { key: 'sowee', count: g.sowee != null ? all[cardType(g.sowee)] : 0, each: PRICE.sowee },   // each card identical to the sowee
+    ].filter(x => x.count > 0).map(x => Object.assign(x, { amount: x.count * x.each }));
+    let per = start; for (const x of items) per += x.amount;
+    return { groups, kings, start, startKind, items, per };
+  }
+
+  function finishWin(g, seat, source, bounitId, special) {
+    const pr = priceWin(g, seat, special, bounitId), per = pr.per;
     const opp = opponentsOf(seat);
     for (const p of opp) { g.balances[p] -= per; g.balances[seat] += per; }
     g.phase = 'over'; g.wins[seat]++; g.handsPlayed++; g.nextDealer = g.dealRule === 'right' ? (g.dealer + 1) % 4 : seat; // normally the winner deals the next hand
-    g.result = { type: 'win', winner: seat, source, bounit: bounitId, groups, secrets: g.secrets[seat].slice(), kings, kingsValue, porbis, cond1, cond2, base, fromStock, extraDraws, perOpponent: per, opponents: opp, total: per * opp.length };
-    log(g, 'Cuajo! ' + g.names[seat] + ' wins and collects ' + money(per) + ' from each opponent' + (extraDraws.length ? ' after drawing ' + extraDraws.length + ' extra card' + (extraDraws.length === 1 ? '' : 's') + ' from the stock' : '') + '.', 'over');
+    g.result = { type: 'win', winner: seat, source, special: special || null, bounit: bounitId, groups: pr.groups, secrets: g.secrets[seat].slice(),
+      kings: pr.kings, porbis: pr.kings === 0, start: pr.start, startKind: pr.startKind, items: pr.items, extraDraws: [],
+      fromStock: source !== 'time', perOpponent: per, opponents: opp, total: per * opp.length };
+    if (special) {
+      const what = special === 'prinsesa' ? 'Prinsesa! ' + g.names[seat] + ' holds one king of every suit and no other kings'
+        : special === 'rub' ? 'Rub! ' + g.names[seat] + ' holds ' + (pr.startKind === 'fourKings' ? 'four' : 'three') + ' kings of the same suit'
+        : 'Seven kings! ' + g.names[seat] + ' holds seven kings';
+      log(g, what + ' and wins, collecting ' + money(per) + ' from each opponent.', 'over'); return;
+    }
+    log(g, 'Cuajo! ' + g.names[seat] + ' wins and collects ' + money(per) + ' from each opponent.', 'over');
   }
 
   // ---------- AI ----------
+  /** Dealt three kings of one suit: the computer takes the sure rub rather than hoping for the last copy. */
+  function aiChooseRub(g, seat) { return true; }
   /** Best distance reachable from a full hand by discarding one non-king card; `avail` limits the discardable types. */
-  function bestDiscardDistance(c, slots, avail) {
+  function bestDiscardDistance(c, slots, avail, hasB) {
     avail = avail || c;
     let best = Infinity;
     for (let d = 0; d < NTYPES; d++) if (avail[d] > 0 && !isKingType(d)) {
-      c[d]--; const v = distance(c, slots); c[d]++;
+      c[d]--; const v = distance(c, slots, hasB); c[d]++;
       if (v < best) best = v;
     }
     return best;
@@ -551,15 +758,13 @@
     const pool = poolCounts(g, seat), hand = handCounts(g, seat), slots = slotsFor(g, seat), top = topDiscard(g);
     if (top == null) return g.stock.length ? 'stock' : 'end';
     const t = cardType(top);
-    if (mayWin(g, seat) && completesWith(g, seat, t)) {
-      if (g.stock.length && slip(g, seat, 0.3)) return 'stock';          // did not notice the winning card
-      return 'discard';
-    }
     if (!g.stock.length) return 'end';
+    if (completesWith(g, seat, t)) return 'stock';                        // you cannot win with a discard
+    const hb = secretB(g, seat);
     pool[t]++; hand[t]++;
-    const dTake = bestDiscardDistance(pool, slots, hand);
+    const dTake = bestDiscardDistance(pool, slots, hand, hb);
     pool[t]--; hand[t]--;
-    const dNow = distance(pool, slots);
+    const dNow = distance(pool, slots, hb);
     if (dTake < dNow) return slip(g, seat) ? 'stock' : 'discard';        // sometimes misses a useful discard
     if (dTake === dNow && slip(g, seat, 0.4)) return 'discard';          // takes a card on a hunch
     return 'stock';
@@ -574,12 +779,13 @@
     if (four) return { type: four.type, extraId: null };
     const o = opts[0]; // three cards matching the sowee + a fourth card that stays in the pool but can never be discarded
     const pool = poolCounts(g, seat), hand = handCounts(g, seat), slots = slotsFor(g, seat);
-    const dNow = bestDiscardDistance(pool, slots, hand);
+    const hb = secretB(g, seat), hb2 = hb || rankOf(o.type) === ACE;
+    const dNow = bestDiscardDistance(pool, slots, hand, hb);
     pool[o.type] -= 3; hand[o.type] -= 3;
     let best = null;
     for (let e = 0; e < NTYPES; e++) if (hand[e] > 0) {
       hand[e]--;
-      const v = (sum(pool) === slots - 3 && canPartition(pool)) ? -1 : bestDiscardDistance(pool, slots - 3, hand);
+      const v = (sum(pool) === slots - 3 && completeB(pool, hb2)) ? -1 : bestDiscardDistance(pool, slots - 3, hand, hb2);
       hand[e]++;
       const score = v - (isKingType(e) ? 0.5 : 0); // a king is the natural fourth card: a combination by itself
       if (!best || score < best.score) best = { e, score, v };
@@ -591,10 +797,10 @@
   }
 
   function aiChooseDiscard(g, seat) {
-    const pool = poolCounts(g, seat), hand = handCounts(g, seat), slots = slotsFor(g, seat);
+    const pool = poolCounts(g, seat), hand = handCounts(g, seat), slots = slotsFor(g, seat), hb = secretB(g, seat);
     let cands = [], bestD = Infinity;
     for (let d = 0; d < NTYPES; d++) if (hand[d] > 0 && !isKingType(d)) {
-      pool[d]--; const v = distance(pool, slots); pool[d]++;
+      pool[d]--; const v = distance(pool, slots, hb); pool[d]++;
       cands.push({ d, v }); if (v < bestD) bestD = v;
     }
     let tied = cands.filter(x => x.v === bestD);
@@ -610,7 +816,7 @@
     }
     if (tied.length > 1) { // prefer the discard that leaves the most live draws
       for (const x of tied) {
-        pool[x.d]--; const u = usefulTypes(pool, slots); pool[x.d]++;
+        pool[x.d]--; const u = usefulTypes(pool, slots, hb); pool[x.d]++;
         x.outs = 0; for (const t of u) x.outs += Math.max(0, 4 - g.seen[t] - pool[t]);
       }
       const bo = Math.max.apply(null, tied.map(x => x.outs)); tied = tied.filter(x => x.outs === bo);
@@ -628,20 +834,25 @@
     return null;
   }
 
-  /** Hints for a seat: distance, waiting/useful cards, best discard and the grouping plan. */
+  /** Hints for a seat: distance, waiting/useful cards, best discard, the grouping plan, and whether a baksyo is in place. */
+  const hintMemo = new Map();
   function analyze(g, seat) {
-    const pool = poolCounts(g, seat), hand = handCounts(g, seat), slots = slotsFor(g, seat), n = poolIds(g, seat).length;
-    const out = { n, slots, plan: keepPlan(pool, slots), penalty: g.penalty[seat] };
+    const pool = poolCounts(g, seat), hand = handCounts(g, seat), slots = slotsFor(g, seat), n = poolIds(g, seat).length, hb = secretB(g, seat);
+    const key = pool.join('') + '|' + hand.join('') + '|' + slots + '|' + (hb ? 1 : 0) + '|' + g.penalty[seat];
+    const hit = hintMemo.get(key); if (hit) return hit;
+    const out = { n, slots, plan: keepPlanB(pool, slots, hb), penalty: g.penalty[seat], baksyo: hb || BAKSYO.some(B => hasAll(pool, B)), needB: needsBaksyo(pool, hb) };
     if (n === slots) {
-      out.complete = canPartition(pool);
+      out.complete = completeB(pool, hb);
       let best = null;
-      for (let d = 0; d < NTYPES; d++) if (hand[d] > 0 && !isKingType(d)) { pool[d]--; const v = distance(pool, slots); pool[d]++; if (!best || v < best.distance) best = { type: d, distance: v }; }
+      for (let d = 0; d < NTYPES; d++) if (hand[d] > 0 && !isKingType(d)) { pool[d]--; const v = distance(pool, slots, hb); pool[d]++; if (!best || v < best.distance) best = { type: d, distance: v }; }
       out.bestDiscard = best;
     } else if (n === slots - 1) {
-      out.distance = distance(pool, slots);
-      out.waiting = waitingTypes(pool, slots);
-      out.useful = usefulTypes(pool, slots);
+      out.distance = distance(pool, slots, hb);
+      out.waiting = waitingTypes(pool, slots, hb);
+      out.useful = usefulTypes(pool, slots, hb);
     }
+    if (hintMemo.size > 200) hintMemo.clear();
+    hintMemo.set(key, out);
     return out;
   }
 
@@ -649,8 +860,9 @@
     SUITS, SUIT_LABEL, SUIT_ES, RANKS, RANK_LABEL, RANK_ES, ACE, KING, NTYPES, NCARDS, HAND, SECRET_PAY,
     setCurrency, typeOf, suitOf, rankOf, cardType, isKing, isKingType, cardName, partnerOf, opponentsOf, money, countsOf,
     canPartition, partition, bestKeep, distance, keepPlan, waitingTypes, usefulTypes, goesWith,
+    BAKSYO, isBaksyo, completeB, partitionB, keepPlanB, bestKeepB, secretB, planFor, kingWin, kingCount, rubClaimant, resolveRub, declareRub, maxSameKing, specialNow, anyKing, needsBaksyo, PRICE, priceWin, bestScoring, groupPoints,
     newGame, startHand, nextHand, handCounts, poolIds, poolCounts, extrasOf, slotsFor, isComplete, completesWith, mayWin, topDiscard, currentClaimant, legalActions,
     drawStock, takeDiscard, resolveTime, secretOptions, declareSecret, discard, endHandDraw,
-    aiChooseDraw, aiChooseSecret, aiChooseDiscard, aiClaimsTime, analyze, DIFFICULTY, setDifficulty, mistakeRate,
+    aiChooseDraw, aiChooseRub, aiChooseSecret, aiChooseDiscard, aiClaimsTime, analyze, DIFFICULTY, setDifficulty, mistakeRate,
   };
 });
