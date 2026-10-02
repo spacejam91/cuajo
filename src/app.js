@@ -101,7 +101,9 @@
       'Kings': 'Mga king', '3-4-5 runs (baksyo)': 'Run na 3-4-5 (baksyo)', 'Jack-horse-king runs (a king as the baksyo)': 'Run na sota-caballo-rey (king ang baksyo)', 'Pongs': 'Mga pong', 'Four aces': 'Apat na as', 'Three aces': 'Tatlong as', 'Sets of four': 'Set na apat', 'Secrets': 'Mga secret', 'Cards matching the sowee': 'Kapareho ng sowee',
       'Rub!': 'Rub!', 'Wait for the fourth king': 'Hintayin ang ikaapat na king', 'Win now with the rub': 'Manalo na sa rub', 'Rub! Win now, or wait for the fourth king.': 'Rub! Manalo na, o hintayin ang ikaapat na king.',
       'You are waiting for the fourth king. You can still win with the rub on your turn.': 'Hinihintay mo ang ikaapat na king. Puwede ka pa ring manalo sa rub sa turn mo.', 'No-king wins': 'Mga panalong walang king',
-      'Full screen': 'Full screen', 'Leave full screen': 'Umalis sa full screen', 'Discards': 'Mga itinapon', 'See all discards': 'Tingnan ang lahat ng itinapon', 'See all the discards': 'Tingnan ang lahat ng itinapon', 'Nothing thrown yet.': 'Wala pang itinatapon.',
+      'Full screen': 'Full screen', 'Leave full screen': 'Umalis sa full screen', 'Discards': 'Mga itinapon',
+      'Keep it until your next turn.': 'Itago mo muna ito hanggang sa susunod mong turn.', 'Keep the card you just took until your next turn': 'Itago muna ang kakakuha mong baraha hanggang sa susunod mong turn',
+      'Just taken from the discards: keep it until your next turn': 'Kakakuha lang sa tapunan: itago muna hanggang sa susunod mong turn', 'You just took that card from the discards. Keep it until your next turn.': 'Kakakuha mo lang ang barahang iyan sa tapunan. Itago mo muna hanggang sa susunod mong turn.', 'See all discards': 'Tingnan ang lahat ng itinapon', 'See all the discards': 'Tingnan ang lahat ng itinapon', 'Nothing thrown yet.': 'Wala pang itinatapon.',
       'Every card thrown this hand, oldest first. Faded cards were picked up by the next player.': 'Lahat ng itinapon sa hand na ito, mula sa pinakauna. Ang malabo ay kinuha ng sumunod na manlalaro.',
       'Prinsesa!': 'Prinsesa!', 'Rub!': 'Rub!', 'Seven kings!': '7 kings!', 'Special win': 'Espesyal na panalo', 'Special wins pay double': 'Doble ang bayad sa espesyal na panalo',
       'Prinsesa: one king of every suit and no other kings': 'Prinsesa: isang king sa bawat suit, at wala nang ibang king', 'Rub: three or four kings of the same suit': 'Rub: tatlo o apat na king na pareho ang suit', 'Seven kings: seven kings in one hand': '7 kings: pitong king sa iisang hawak',
@@ -696,6 +698,7 @@
   function onDiscard(id, noFly) {
     const card = id != null ? id : (selIds.length === 1 ? selIds[0] : null);
     if (card == null || !myTurn('discard') || C.isKing(card) || pickExtra != null) return;
+    if (C.cardType(card) === C.blockedType(g, ME)) { flash('You just took that card from the discards. Keep it until your next turn.'); return; }
     humanAct('discard', card, noFly);
   }
   function onSecret(opt) {
@@ -828,8 +831,8 @@
       return st;
     }
     if (pickExtra != null) { add('Choose any fourth card from your hand to lay down with your three ' + cn(pickExtra) + ' cards.'); return st; }
-    const drew = g.drawn != null ? 'You ' + (g.drawnFrom === 'discard' ? 'took' : 'drew') + ' the ' + cn(C.cardType(g.drawn)) + '. ' : (g.turnCount === 0 ? 'You dealt, so you discard first. ' : '');
-    add(drew + (selIds.length === 1 && !C.isKing(selIds[0]) ? 'Discard the ' + cn(C.cardType(selIds[0])) + '?' : 'Choose a card to discard.'));
+    const drew = g.drawn != null ? 'You ' + (g.drawnFrom === 'discard' ? 'took' : 'drew') + ' the ' + cn(C.cardType(g.drawn)) + '. ' + (C.blockedType(g, ME) != null ? 'Keep it until your next turn. ' : '') : (g.turnCount === 0 ? 'You dealt, so you discard first. ' : '');
+    add(drew + (selIds.length === 1 && !C.isKing(selIds[0]) && C.cardType(selIds[0]) !== C.blockedType(g, ME) ? 'Discard the ' + cn(C.cardType(selIds[0])) + '?' : 'Choose a card to discard.'));
     return st;
   }
   function completesMe(t) { return C.completesWith(g, ME, t); }
@@ -1049,7 +1052,7 @@
     if (groupOf[other] !== groupOf[id]) { if (groupOf[other] != null) groupOf[id] = groupOf[other]; else delete groupOf[id]; } // stepping into or out of a group
     save(); render();
   }
-  function canDropOnDiscard(d) { return d.kind === 'card' && myTurn('discard') && pickExtra == null && !C.isKing(d.id); }
+  function canDropOnDiscard(d) { return d.kind === 'card' && myTurn('discard') && pickExtra == null && !C.isKing(d.id) && C.cardType(d.id) !== C.blockedType(g, ME); }
 
   // ---------- dragging cards and groups ----------
   function onHandPointerDown(e, id, node, kind) {
@@ -1228,6 +1231,7 @@
     else {
       handDirty = false; hand.innerHTML = '';
       const discarding = myTurn('discard');
+      const keepType = discarding ? C.blockedType(g, ME) : null;
       const marks = handMarks();
       const cards = orderedHand();
       const inHand = new Set(cards);
@@ -1257,6 +1261,7 @@
           cd.title += ' · click to select, drag or Shift + arrow keys to move';
           let label = cn(C.cardType(id));
           if (discarding && pickExtra == null && C.isKing(id)) { cd.classList.add('king-lock'); label += ' (cannot be discarded)'; }
+          else if (discarding && pickExtra == null && C.cardType(id) === keepType) { cd.classList.add('keep-lock'); label += ' (just taken from the discards: keep it until your next turn)'; cd.title = L('Just taken from the discards: keep it until your next turn'); }
           cd.setAttribute('aria-label', label + ', card ' + (i + 1) + ' of ' + cards.length);
           cd.addEventListener('click', () => { if (!suppressClick) onCard(id); });
           if (discarding) cd.addEventListener('dblclick', () => { if (pickExtra == null && !C.isKing(id)) onDiscard(id); });
@@ -1309,6 +1314,7 @@
         let label = 'Discard (select a card)', off = true;
         if (selIds.length > 1) label = 'Select one card to discard';
         else if (one != null && C.isKing(one)) label = 'Kings can\u2019t be discarded';
+        else if (one != null && C.cardType(one) === C.blockedType(g, ME)) label = 'Keep the card you just took until your next turn';
         else if (one != null) { label = 'Discard the ' + cn(C.cardType(one)); off = false; }
         const db = btn(label, () => onDiscard(), 'primary', off); db.dataset.key = 'discard-btn';
         bar.append(db);
@@ -1515,7 +1521,7 @@
     '<h3>Players and deal</h3>',
     '<p>Four players in two partnerships: you and North against East and West. The dealer takes 16 cards and everyone else 15. The next card is turned face up as the <b>sowee</b>; it is never played but affects the payment. The rest is the stock. The dealer discards first, and play passes to the right (you, then East, North, West). The winner of a hand deals the next one; after a drawn hand the same player deals again.</p>',
     '<h3>Your turn</h3>',
-    '<ol><li>Take the top card of the stock, or the previous player’s discard (the top of the discard pile). A discard can only be taken by the next player in turn. You can never win with a discard: if the top discard would complete your hand, leave it and draw from the stock.</li><li>If you hold four identical cards, you may lay them face down as a <b>secret</b>, and each opponent pays you ₱50 at once, whether or not you win the hand. The three cards identical to the sowee also make a secret when laid down together with any fourth card from your hand; that fourth card is not free: it must still be part of a combination when you win, so a king is the usual choice.</li><li>Discard one card face up. <b>Kings are never discarded.</b></li></ol>',
+    '<ol><li>Take the top card of the stock, or the previous player’s discard (the top of the discard pile). A discard can only be taken by the next player in turn. You can never win with a discard: if the top discard would complete your hand, leave it and draw from the stock.</li><li>If you hold four identical cards, you may lay them face down as a <b>secret</b>, and each opponent pays you ₱50 at once, whether or not you win the hand. The three cards identical to the sowee also make a secret when laid down together with any fourth card from your hand; that fourth card is not free: it must still be part of a combination when you win, so a king is the usual choice.</li><li>Discard one card face up. <b>Kings are never discarded</b>, and a card you just took from the discards stays in your hand until your next turn.</li></ol>',
     '<h3>Combinations</h3>',
     '<ul><li><b>Set</b>: three or four cards of the same rank in different suits.</li><li><b>Run</b>: 3-4-5 or jack-horse-king in one suit (aces never run).</li><li><b>Pong</b>: three or four identical cards (same rank and suit).</li><li><b>Secret</b>: four identical cards laid face down.</li><li><b>King</b>: a king counts as a combination on its own.</li></ul>',
     '<h3>Baksyo</h3>',
@@ -1832,7 +1838,7 @@
       if (dealing) return;
       const la = C.legalActions(g, seat), a = msg.a, arg = msg.arg;
       const ok = a === 'drawStock' ? la.drawStock : a === 'takeDiscard' ? la.takeDiscard : a === 'endHand' ? la.endHand
-        : a === 'discard' ? la.discard && g.hands[seat].indexOf(arg) >= 0 && !C.isKing(arg)
+        : a === 'discard' ? la.discard && g.hands[seat].indexOf(arg) >= 0 && !C.isKing(arg) && C.cardType(arg) !== C.blockedType(g, seat)
         : a === 'secret' ? la.discard && !!arg && la.secrets.some(o => o.type === arg.type)
         : a === 'time' ? la.timeClaim : a === 'rub' ? la.rubChoice : a === 'rubNow' ? la.declareRub : false;
       if (!ok) { sendStateTo(gu, null); return; }
@@ -2281,7 +2287,7 @@
     '<h3>Manlalaro at deal</h3>',
     '<p>Apat ang naglalaro, at magkakampi ang magkaharap. Labing-anim na baraha ang hawak ng dealer at labinlima naman ang sa iba. Ang susunod na baraha ay ibinubukas bilang <b>sowee</b>: hindi ito nilalaro pero may epekto sa bayad. Ang matitira ang magiging stock. Ang dealer ang unang magtatapon, at pakanan ang ikot ng laro. Ang nanalo ang magde-deal sa susunod; kapag tabla, parehong dealer ulit.</p>',
     '<h3>Sa turn mo</h3>',
-    '<ol><li>Bumunot sa stock, o kunin ang huling itinapon ng naunang manlalaro. Ang susunod lang sa turn ang puwedeng kumuha ng itinapon. Hindi ka puwedeng manalo gamit ang itinapon: kung bubuo sa hawak mo ang huling itinapon, iwan ito at bumunot sa stock.</li><li>Kung may apat kang magkaparehong baraha, puwede mo itong ilapag nang nakataob bilang <b>secret</b>, at magbabayad agad sa iyo ng ₱50 ang bawat kalaban, manalo ka man o hindi. Ang tatlong kapareho ng sowee, kasama ang kahit anong ikaapat na baraha, ay secret din; pero kailangan pa ring bahagi ng kombinasyon ang ikaapat na iyon sa pagpanalo, kaya king ang karaniwang pinipili.</li><li>Magtapon ng isang baraha. <b>Hindi puwedeng itapon ang king.</b></li></ol>',
+    '<ol><li>Bumunot sa stock, o kunin ang huling itinapon ng naunang manlalaro. Ang susunod lang sa turn ang puwedeng kumuha ng itinapon. Hindi ka puwedeng manalo gamit ang itinapon: kung bubuo sa hawak mo ang huling itinapon, iwan ito at bumunot sa stock.</li><li>Kung may apat kang magkaparehong baraha, puwede mo itong ilapag nang nakataob bilang <b>secret</b>, at magbabayad agad sa iyo ng ₱50 ang bawat kalaban, manalo ka man o hindi. Ang tatlong kapareho ng sowee, kasama ang kahit anong ikaapat na baraha, ay secret din; pero kailangan pa ring bahagi ng kombinasyon ang ikaapat na iyon sa pagpanalo, kaya king ang karaniwang pinipili.</li><li>Magtapon ng isang baraha. <b>Hindi puwedeng itapon ang king</b>, at ang barahang kakakuha mo lang sa tapunan ay hindi muna puwedeng itapon hanggang sa susunod mong turn.</li></ol>',
     '<h3>Mga kombinasyon</h3>',
     '<ul><li><b>Set</b>: tatlo o apat na magkaparehong numero na magkakaiba ang suit.</li><li><b>Run</b>: 3-4-5 o sota-caballo-rey sa iisang suit (hindi puwede ang as).</li><li><b>Pong</b>: tatlo o apat na magkaparehong-magkapareho na baraha (parehong numero at suit).</li><li><b>Secret</b>: apat na magkaparehong baraha na nakataob na inilapag.</li><li><b>King</b>: kombinasyon na ang isang king kahit mag-isa.</li></ul>',
     '<h3>Baksyo</h3>',

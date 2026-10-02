@@ -383,4 +383,36 @@ ok(wins + draws === NG, 'every hand ended');
   }
   console.log('special king wins: prinsesa, seven kings and rub (own draw and claimed) checked; rub choice at the deal checked');
 }
+// 9. a card taken from the discards stays until your next turn; dealt rubs are rarer than a plain shuffle
+{
+  let tested = 0;
+  for (let sd = 1; sd < 400 && tested < 25; sd++) {
+    const gk = C.newGame({ seed: sd, human: -1 }); C.startHand(gk);
+    let guard = 0;
+    while (gk.phase !== 'over' && guard++ < 200) {
+      if (gk.phase === 'timeOffer') { C.resolveTime(gk, true); continue; }
+      if (gk.phase === 'rubOffer') { C.resolveRub(gk, true); continue; }
+      const seat = gk.turn;
+      if (gk.phase === 'draw') {
+        if (C.legalActions(gk, seat).takeDiscard) {
+          C.takeDiscard(gk, seat);
+          if (gk.phase !== 'discard') continue;
+          const taken = gk.drawn, t = C.cardType(taken);
+          if (C.blockedType(gk, seat) === t) {
+            let threw = false; try { C.discard(gk, seat, taken); } catch (e) { threw = true; }
+            ok(threw, 'the card just taken from the discards cannot be thrown back');
+            ok(C.cardType(C.aiChooseDiscard(gk, seat)) !== t, 'the computer keeps the card it just took');
+            const a = C.analyze(gk, seat); ok(!a.bestDiscard || a.bestDiscard.type !== t, 'the hint never suggests throwing it back');
+            tested++;
+          }
+        } else if (gk.stock.length) C.drawStock(gk, seat); else C.endHandDraw(gk);
+      } else if (gk.phase === 'discard') C.discard(gk, seat, C.aiChooseDiscard(gk, seat));
+    }
+  }
+  ok(tested >= 10, 'taken-card rule exercised (' + tested + ' times)');
+  let rubs = 0; const ND = 3000;
+  for (let i = 0; i < ND; i++) { const gd = C.newGame({ seed: 50000 + i, human: -1 }); C.startHand(gd); if (C.dealtRub(gd)) rubs++; }
+  ok(rubs / ND < 0.1, 'a rub straight from the deal comes up less than once in 10 hands (' + (100 * rubs / ND).toFixed(1) + '%)');
+  console.log('taken discards stay a turn (' + tested + ' checks); dealt rubs ' + (100 * rubs / ND).toFixed(1) + '% of hands');
+}
 console.log('all engine checks passed:', passed);

@@ -74,6 +74,9 @@ shadows, with a Spanish-style lattice back.
 ## House rules (family table)
 
 - You can only win with a card from the stock, never with a discard. When the stock is empty the hand is a draw.
+- A card taken from the discards stays in your hand until your next turn.
+- A rub straight from the deal comes up about once in 14 hands. A plain shuffle would give about one in 9,
+  so a share of those deals is shuffled again to match the family table.
 - Pong: three or four identical cards make a combination.
 - Baksyo: a hand that holds any king must include three or four aces, or 3-4-5 or jack-horse-king of one suit.
   A hand with no kings needs no baksyo.

@@ -352,21 +352,34 @@
     };
   }
 
-  function startHand(g) {
-    g.handNo++;
+  /** House feel: a plain shuffle deals someone three kings of one suit about once in 9 hands, more often than
+      it happens at the family table (once in 10 at most), so a share of those deals is shuffled again. */
+  const REDEAL_RUB = 0.45;
+  function shuffleAndDeal(g) {
     const deck = []; for (let i = 0; i < NCARDS; i++) deck.push(i);
     for (let i = NCARDS - 1; i > 0; i--) { const j = randInt(g, i + 1); const tmp = deck[i]; deck[i] = deck[j]; deck[j] = tmp; }
-    g.hands = [[], [], [], []]; g.secrets = [[], [], [], []];
-    g.purro = [false, false, false, false]; g.waiting = [[], [], [], []]; g.marker = [null, null, null, null]; g.penalty = [0, 0, 0, 0];
-    g.discards = []; g.discardedBy = []; g.history = []; g.seen = new Array(NTYPES).fill(0); g.seenIds = {};
-    g.events = []; g.result = null; g.timeOffer = null; g.lastShown = null; g.drawn = null; g.drawnFrom = null;
+    g.hands = [[], [], [], []];
     // Deal to the right (anticlockwise) starting with the dealer: dealer 16 cards, everyone else 15.
     for (let k = 0; k < 4; k++) {
       const seat = (g.dealer + k) % 4, n = seat === g.dealer ? HAND : HAND - 1;
       for (let i = 0; i < n; i++) g.hands[seat].push(deck.pop());
     }
-    g.sowee = deck.pop(); markSeen(g, g.sowee);
+    g.sowee = deck.pop();
     g.stock = deck; // top of the stock = last element
+  }
+  function dealtRub(g) {
+    for (let p = 0; p < 4; p++) { const c = countsOf(g.hands[p]); for (let s = 0; s < 4; s++) if (c[typeOf(s, KING)] >= 3) return true; }
+    return false;
+  }
+  function startHand(g) {
+    g.handNo++;
+    shuffleAndDeal(g);
+    if (dealtRub(g) && nextRand(g) < REDEAL_RUB) shuffleAndDeal(g);
+    g.secrets = [[], [], [], []];
+    g.purro = [false, false, false, false]; g.waiting = [[], [], [], []]; g.marker = [null, null, null, null]; g.penalty = [0, 0, 0, 0];
+    g.discards = []; g.discardedBy = []; g.history = []; g.seen = new Array(NTYPES).fill(0); g.seenIds = {};
+    g.events = []; g.result = null; g.timeOffer = null; g.lastShown = null; g.drawn = null; g.drawnFrom = null;
+    markSeen(g, g.sowee);
     g.turn = g.dealer; g.phase = 'discard'; g.turnCount = 0; g.rubWait = [false, false, false, false]; g.rubOffer = null;
     log(g, 'Hand ' + g.handNo + ': ' + g.names[g.dealer] + ' deals. The sowee is the ' + cardName(cardType(g.sowee)) + '.', 'deal');
     dealChecks(g, 0);
@@ -561,11 +574,18 @@
     if (mayWin(g, seat) && isComplete(g, seat)) finishWin(g, seat, g.drawnFrom || 'deal', g.drawn, kingWin(g, seat) || undefined);
   }
 
+  /** House rule: a card taken from the discards cannot be thrown back the same turn (nor an identical copy of it). */
+  function blockedType(g, seat) {
+    if (g.phase !== 'discard' || g.turn !== seat || g.drawnFrom !== 'discard' || g.drawn == null) return null;
+    const t = cardType(g.drawn);
+    return g.hands[seat].some(x => !isKing(x) && cardType(x) !== t) ? t : null;   // never leave a player with nothing to discard
+  }
   function discard(g, seat, id) {
     assert(g.phase === 'discard' && g.turn === seat, 'not your turn to discard');
     const h = g.hands[seat], i = h.indexOf(id);
     assert(i >= 0, 'card not in hand');
     assert(!isKing(id), 'kings may not be discarded');
+    assert(cardType(id) !== blockedType(g, seat), 'a card taken from the discards stays in your hand until your next turn');
     h.splice(i, 1); g.discards.push(id); g.discardedBy.push(seat); g.history.push({ seat, type: cardType(id), id }); markSeen(g, id);
     g.drawn = null; g.drawnFrom = null; g.lastShown = null;
     log(g, g.names[seat] + ' discards the ' + cardName(cardType(id)) + '.', 'discard');
@@ -761,9 +781,10 @@
     if (!g.stock.length) return 'end';
     if (completesWith(g, seat, t)) return 'stock';                        // you cannot win with a discard
     const hb = secretB(g, seat);
-    pool[t]++; hand[t]++;
-    const dTake = bestDiscardDistance(pool, slots, hand, hb);
-    pool[t]--; hand[t]--;
+    pool[t]++;
+    const keep = hand.slice(); keep[t] = 0;                               // the taken card has to stay this turn
+    const dTake = bestDiscardDistance(pool, slots, keep, hb);
+    pool[t]--;
     const dNow = distance(pool, slots, hb);
     if (dTake < dNow) return slip(g, seat) ? 'stock' : 'discard';        // sometimes misses a useful discard
     if (dTake === dNow && slip(g, seat, 0.4)) return 'discard';          // takes a card on a hunch
@@ -797,9 +818,9 @@
   }
 
   function aiChooseDiscard(g, seat) {
-    const pool = poolCounts(g, seat), hand = handCounts(g, seat), slots = slotsFor(g, seat), hb = secretB(g, seat);
+    const pool = poolCounts(g, seat), hand = handCounts(g, seat), slots = slotsFor(g, seat), hb = secretB(g, seat), bl = blockedType(g, seat);
     let cands = [], bestD = Infinity;
-    for (let d = 0; d < NTYPES; d++) if (hand[d] > 0 && !isKingType(d)) {
+    for (let d = 0; d < NTYPES; d++) if (hand[d] > 0 && !isKingType(d) && d !== bl) {
       pool[d]--; const v = distance(pool, slots, hb); pool[d]++;
       cands.push({ d, v }); if (v < bestD) bestD = v;
     }
@@ -837,14 +858,14 @@
   /** Hints for a seat: distance, waiting/useful cards, best discard, the grouping plan, and whether a baksyo is in place. */
   const hintMemo = new Map();
   function analyze(g, seat) {
-    const pool = poolCounts(g, seat), hand = handCounts(g, seat), slots = slotsFor(g, seat), n = poolIds(g, seat).length, hb = secretB(g, seat);
-    const key = pool.join('') + '|' + hand.join('') + '|' + slots + '|' + (hb ? 1 : 0) + '|' + g.penalty[seat];
+    const pool = poolCounts(g, seat), hand = handCounts(g, seat), slots = slotsFor(g, seat), n = poolIds(g, seat).length, hb = secretB(g, seat), bl = blockedType(g, seat);
+    const key = pool.join('') + '|' + hand.join('') + '|' + slots + '|' + (hb ? 1 : 0) + '|' + g.penalty[seat] + '|' + bl;
     const hit = hintMemo.get(key); if (hit) return hit;
     const out = { n, slots, plan: keepPlanB(pool, slots, hb), penalty: g.penalty[seat], baksyo: hb || BAKSYO.some(B => hasAll(pool, B)), needB: needsBaksyo(pool, hb) };
     if (n === slots) {
       out.complete = completeB(pool, hb);
       let best = null;
-      for (let d = 0; d < NTYPES; d++) if (hand[d] > 0 && !isKingType(d)) { pool[d]--; const v = distance(pool, slots, hb); pool[d]++; if (!best || v < best.distance) best = { type: d, distance: v }; }
+      for (let d = 0; d < NTYPES; d++) if (hand[d] > 0 && !isKingType(d) && d !== bl) { pool[d]--; const v = distance(pool, slots, hb); pool[d]++; if (!best || v < best.distance) best = { type: d, distance: v }; }
       out.bestDiscard = best;
     } else if (n === slots - 1) {
       out.distance = distance(pool, slots, hb);
@@ -860,7 +881,7 @@
     SUITS, SUIT_LABEL, SUIT_ES, RANKS, RANK_LABEL, RANK_ES, ACE, KING, NTYPES, NCARDS, HAND, SECRET_PAY,
     setCurrency, typeOf, suitOf, rankOf, cardType, isKing, isKingType, cardName, partnerOf, opponentsOf, money, countsOf,
     canPartition, partition, bestKeep, distance, keepPlan, waitingTypes, usefulTypes, goesWith,
-    BAKSYO, isBaksyo, completeB, partitionB, keepPlanB, bestKeepB, secretB, planFor, kingWin, kingCount, rubClaimant, resolveRub, declareRub, maxSameKing, specialNow, anyKing, needsBaksyo, PRICE, priceWin, bestScoring, groupPoints,
+    BAKSYO, isBaksyo, completeB, partitionB, keepPlanB, bestKeepB, secretB, planFor, kingWin, kingCount, rubClaimant, blockedType, dealtRub, REDEAL_RUB, resolveRub, declareRub, maxSameKing, specialNow, anyKing, needsBaksyo, PRICE, priceWin, bestScoring, groupPoints,
     newGame, startHand, nextHand, handCounts, poolIds, poolCounts, extrasOf, slotsFor, isComplete, completesWith, mayWin, topDiscard, currentClaimant, legalActions,
     drawStock, takeDiscard, resolveTime, secretOptions, declareSecret, discard, endHandDraw,
     aiChooseDraw, aiChooseRub, aiChooseSecret, aiChooseDiscard, aiClaimsTime, analyze, DIFFICULTY, setDifficulty, mistakeRate,
