@@ -205,6 +205,16 @@ ok(wins + draws === NG, 'every hand ended');
   ok(pr.start === 500 && pr.startKind === 'kingBaksyo' && pr.per === 500 + 4 * 5 + 10 + 5 + 20 + 5, 'king as the winning card of a J-H-K baksyo: starts at 500 = ' + pr.per);
   pr = C.priceWin(gp, 0, null, gp.hands[0][3]);
   ok(pr.start === 200, 'another king as the winning card (not finishing the baksyo run): still 200');
+  // singrey: every king sits in a jack-horse-king run used as baksyo, so it starts at 500 even with 2-6 kings
+  gp.hands[0] = ids([T(0,4), T(0,5), T(0,6), T(1,4), T(1,5), T(1,6), T(2,1), T(2,2), T(2,3), T(0,0), T(1,0), T(2,0), T(0,2), T(1,2), T(2,2), T(3,2)]);
+  ok(C.isComplete(gp, 0) && C.kingWin(gp, 0) === null, 'singrey hand complete');
+  pr = C.priceWin(gp, 0, null);
+  ok(pr.start === 500 && pr.startKind === 'singrey' && pr.per === 500 + 2 * 5 + 2 * 10 + 5 + 5 + 5, 'singrey: two kings, each in its own sota-kabayo-hari, start at 500 = ' + pr.per);
+  // a third king standing alone spoils it
+  gp.hands[0] = ids([T(0,4), T(0,5), T(0,6), T(1,4), T(1,5), T(1,6), T(2,1), T(2,2), T(2,3), T(0,0), T(1,0), T(2,0), T(3,6), T(1,2), T(2,2), T(3,2)]);
+  ok(C.isComplete(gp, 0), 'hand with a lone third king complete');
+  pr = C.priceWin(gp, 0, null);
+  ok(pr.start === 200 && pr.startKind === 'regular', 'a king outside a sota-kabayo-hari run: no singrey, start 200');
   // no kings: starts at 500 and needs no baksyo
   gp.hands[0] = ids([T(0,1), T(0,2), T(0,3), T(1,1), T(1,2), T(1,3), T(0,0), T(1,0), T(2,0), T(0,2), T(1,2), T(2,2), T(3,2), T(3,3), T(3,3), T(3,3)]);
   ok(C.isComplete(gp, 0), 'no-king hand complete');

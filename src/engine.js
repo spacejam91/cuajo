@@ -713,12 +713,29 @@
         }
       }
     }
+    // House rule (singrey): every king the player holds sits in a jack-horse-king run used as baksyo, also starts at 500.
+    let singrey = false;
+    if (!special && kings >= 2 && sameKing < 3) {
+      const rest = pool.slice(), runs = []; let fits = true;
+      for (let s = 0; s < 4 && fits; s++) {
+        const K = typeOf(s, KING), J = typeOf(s, 4), H = typeOf(s, 5);
+        for (let i = 0; i < all[K]; i++) {
+          if (rest[J] > 0 && rest[H] > 0 && rest[K] > 0) { rest[J]--; rest[H]--; rest[K]--; runs.push({ types: [J, H, K], kind: 'run' }); }
+          else { fits = false; break; }
+        }
+      }
+      const sub = fits ? bestScoring(rest, false, false) : null;
+      if (sub) {
+        const pts = runs.reduce((a, r) => a + groupPoints(r), 0) + sub.pts;
+        if (!kingBaksyo || pts >= best.pts) { best = { pts, groups: runs.concat(sub.groups) }; singrey = true; kingBaksyo = false; }
+      }
+    }
     const groups = best.groups.slice();
     // anything a special win leaves unmelded is shown as the rest of the hand
     const left = pool.slice(); for (const gp of groups) for (const t of gp.types) left[t]--;
     const leftTypes = []; for (let t = 0; t < NTYPES; t++) for (let i = 0; i < left[t]; i++) leftTypes.push(t);
     groups.sort((a, b) => (a.kind === 'king') - (b.kind === 'king'));
-    if (!special) { const bi = kingBaksyo ? 0 : groups.findIndex(gp => gp.kind !== 'king' && isBaksyo(gp.types)); if (bi >= 0) groups[bi] = Object.assign({}, groups[bi], { baksyo: true }); }
+    if (!special) { const bi = kingBaksyo || singrey ? 0 : groups.findIndex(gp => gp.kind !== 'king' && isBaksyo(gp.types)); if (bi >= 0) groups[bi] = Object.assign({}, groups[bi], { baksyo: true }); }
     if (leftTypes.length) groups.push({ types: leftTypes, kind: 'rest' });
     const count = { run345: 0, runJHK: 0, pong: 0, fourAces: 0, threeAces: 0, setOfFour: 0 };
     for (const gp of best.groups) {
@@ -728,8 +745,8 @@
       if ((gp.kind === 'pong' || gp.kind === 'set') && r === ACE) { if (n >= 4) count.fourAces++; else count.threeAces++; }
       if (gp.kind === 'set' && r !== ACE && n >= 4) count.setOfFour++;
     }
-    const startKind = sameKing >= 4 ? 'fourKings' : special ? special : kings === 0 ? 'nokings' : kings === 1 ? 'oneking' : kingBaksyo ? 'kingBaksyo' : 'regular';
-    const start = sameKing >= 4 ? PRICE.fourKings : (special || kings <= 1 || kingBaksyo) ? PRICE.top : PRICE.regular;
+    const startKind = sameKing >= 4 ? 'fourKings' : special ? special : kings === 0 ? 'nokings' : kings === 1 ? 'oneking' : singrey ? 'singrey' : kingBaksyo ? 'kingBaksyo' : 'regular';
+    const start = sameKing >= 4 ? PRICE.fourKings : (special || kings <= 1 || kingBaksyo || singrey) ? PRICE.top : PRICE.regular;
     const items = [
       { key: 'kings', count: kings, each: PRICE.king },
       { key: 'run345', count: count.run345, each: PRICE.baksyo },

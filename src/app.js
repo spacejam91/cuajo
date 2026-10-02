@@ -88,7 +88,7 @@
   const TL_SEAT = { 'the seat across the table': 'kaharap mo', 'the seat on your right': 'nasa kanan mo', 'the seat on your left': 'nasa kaliwa mo' };
   const TL_SRC = { 'drawn from the stock': 'nabunot sa stock', 'taken from the discard pile': 'kinuha sa tapunan', 'claimed with “time” from another player’s stock draw': 'nakuha sa “time” mula sa bunot ng iba', 'claimed from another player’s shown stock draw': 'kinuha mula sa ipinakitang bunot ng iba', 'the hand was complete as dealt': 'buo na ang hawak mula pa sa deal', 'the kings were dealt to the winner': 'nasa deal pa lang, hawak na ang mga king' };
   const TL_WIN = w => (w === 'Seven kings' ? '7 kings' : w);
-  const TL_START = { 'four kings of one suit': 'apat na king na pareho ang suit', prinsesa: 'prinsesa', rub: 'rub', 'seven kings': '7 kings', 'no kings': 'walang king', 'only one king': 'iisang king', 'won with the king that finishes a jack-horse-king baksyo': 'nanalo sa king na bumuo ng sota-caballo-rey na baksyo', '2 to 6 kings': '2 hanggang 6 na king' };
+  const TL_START = { 'four kings of one suit': 'apat na king na pareho ang suit', prinsesa: 'prinsesa', rub: 'rub', 'seven kings': '7 kings', 'no kings': 'walang king', 'only one king': 'iisang king', 'won with the king that finishes a jack-horse-king baksyo': 'nanalo sa king na bumuo ng sota-caballo-rey na baksyo', 'singrey: every king in a jack-horse-king baksyo': 'singrey: lahat ng king ay nasa sota-caballo-rey na baksyo', '2 to 6 kings': '2 hanggang 6 na king' };
   const TL = {
     exact: {
       'Rules': 'Patakaran', 'Settings': 'Settings', 'Play with a friend': 'Makipaglaro', 'Chat': 'Chat', 'Install app': 'I-install', 'Filipino rummy · Spanish deck of 112': 'Filipino rummy · 112 barahang Espanyol',
@@ -217,7 +217,7 @@
       [/^The conditions were not met from the hand, so (\d+) extra cards? (?:was|were) drawn \(up to 15 allowed\) without meeting both conditions\.$/, 'Hindi natupad ang mga kondisyon mula sa hawak, kaya bumunot ng $1 dagdag na baraha (hanggang 15 ang puwede), pero hindi pa rin natupad ang dalawa.'],
       [/^(.+) — (drawn from the stock|taken from the discard pile|claimed with “time” from another player’s stock draw|claimed from another player’s shown stock draw|the hand was complete as dealt|the kings were dealt to the winner)$/, (m, a, b) => a + ' — ' + TL_SRC[b]],
       [/^(drawn from the stock|taken from the discard pile|claimed with “time” from another player’s stock draw|claimed from another player’s shown stock draw|the hand was complete as dealt|the kings were dealt to the winner)$/, (m, a) => TL_SRC[a]],
-      [/^(.+) \((four kings of one suit|prinsesa|rub|seven kings|no kings|only one king|won with the king that finishes a jack-horse-king baksyo|2 to 6 kings)\)$/, (m, a, b) => a + ' (' + TL_START[b] + ')'],
+      [/^(.+) \((four kings of one suit|prinsesa|rub|seven kings|no kings|only one king|won with the king that finishes a jack-horse-king baksyo|singrey: every king in a jack-horse-king baksyo|2 to 6 kings)\)$/, (m, a, b) => a + ' (' + TL_START[b] + ')'],
       [/^(.+) · (\d+) cards?$/, '$1 · $2 baraha'], [/^(.+) · taken by (.+)$/, (m, c, a) => c + ' · kinuha ' + NI(a)],
       [/^(.+) is looking at their cards…$/, (m, a) => 'Tinitingnan ' + NI(a) + ' ang baraha ' + HIS(a) + '…'],
       [/^You were dealt three (.+) cards\. Win now with the rub, or keep playing and wait for the fourth: four kings of one suit start at (.+) instead of (.+)\. While you wait you can still take the rub on any of your turns, but if someone else wins first, it is gone\.$/, 'Tatlong $1 ang na-deal sa iyo. Manalo na sa rub, o ituloy ang laro at hintayin ang ikaapat: $2 ang panimula ng apat na king na pareho ang suit, sa halip na $3. Habang naghihintay, puwede mo pa ring kunin ang rub sa alinmang turn mo, pero kapag may ibang nanalo muna, wala na ito.'], [/^(Set|Run|Pong|Four alike) · baksyo$/, (m, a) => (a === 'Four alike' ? 'Apat na pareho' : a) + ' · baksyo'],
@@ -1413,7 +1413,7 @@
     return box;
   }
 
-  const START_LABEL = { fourKings: 'four kings of one suit', prinsesa: 'prinsesa', rub: 'rub', sevenkings: 'seven kings', nokings: 'no kings', oneking: 'only one king', kingBaksyo: 'won with the king that finishes a jack-horse-king baksyo', regular: '2 to 6 kings' };
+  const START_LABEL = { fourKings: 'four kings of one suit', prinsesa: 'prinsesa', rub: 'rub', sevenkings: 'seven kings', nokings: 'no kings', oneking: 'only one king', kingBaksyo: 'won with the king that finishes a jack-horse-king baksyo', singrey: 'singrey: every king in a jack-horse-king baksyo', regular: '2 to 6 kings' };
   const ITEM_LABEL = { kings: 'Kings', run345: '3-4-5 runs (baksyo)', runJHK: 'Jack-horse-king runs (a king as the baksyo)', pong: 'Pongs', fourAces: 'Four aces', threeAces: 'Three aces', setOfFour: 'Sets of four', secrets: 'Secrets', sowee: 'Cards matching the sowee' };
   /** Dealt three kings of one suit: win now, or wait for the fourth. */
   function rubBox() {
@@ -1533,6 +1533,7 @@
     '<tr><td>Four kings of one suit</td><td>₱1,000</td></tr>',
     '<tr><td>Prinsesa, rub or seven kings</td><td>₱500</td></tr>',
     '<tr><td>A win with no kings, or with only one king</td><td>₱500</td></tr>',
+    '<tr><td><b>Singrey</b>: every king you hold (2 to 6 of them) is used as baksyo in a jack-horse-king run</td><td>₱500</td></tr>',
     '<tr><td>Winning with the king that finishes your jack-horse-king baksyo (you hold the jack and horse of a suit and the king of that suit is your winning card)</td><td>₱500</td></tr>',
     '<tr><td>Any other win (2 to 6 kings)</td><td>₱200</td></tr>',
     '<tr><th>Plus</th><th></th></tr>',
@@ -2298,6 +2299,7 @@
     '<tr><td>Apat na king na pareho ang suit</td><td>₱1,000</td></tr>',
     '<tr><td>Prinsesa, rub o 7 kings</td><td>₱500</td></tr>',
     '<tr><td>Panalo nang walang king, o iisa lang ang king</td><td>₱500</td></tr>',
+    '<tr><td><b>Singrey</b>: lahat ng king mo (2 hanggang 6) ay ginamit na baksyo sa sota-caballo-rey</td><td>₱500</td></tr>',
     '<tr><td>Nanalo sa king na bumuo ng sota-caballo-rey na baksyo (hawak mo ang sota at caballo ng isang suit, at ang rey ng suit na iyon ang panalong baraha)</td><td>₱500</td></tr>',
     '<tr><td>Ibang panalo (2 hanggang 6 na king)</td><td>₱200</td></tr>',
     '<tr><th>Dagdag</th><th></th></tr>',
