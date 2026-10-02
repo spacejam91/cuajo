@@ -25,8 +25,10 @@
   function isKingType(t) { return rankOf(t) === KING; }
   function isKing(id) { return isKingType(cardType(id)); }
   function cardName(t) { return RANK_LABEL[rankOf(t)] + ' of ' + SUIT_LABEL[suitOf(t)]; }
+  /** The seat across the table (only a position now: everyone plays for themselves). */
   function partnerOf(seat) { return (seat + 2) % 4; }
-  function opponentsOf(seat) { return [0, 1, 2, 3].filter(p => p !== seat && p !== partnerOf(seat)); }
+  /** Everyone else at the table: there are no partners, so all three pay the winner (and pay for secrets). */
+  function opponentsOf(seat) { return [0, 1, 2, 3].filter(p => p !== seat); }
   let CURRENCY = '\u20B1';
   /** The money symbol shown in amounts (pesos by default). */
   function setCurrency(sym) { CURRENCY = sym || '\u20B1'; }
@@ -856,7 +858,7 @@
       const bo = Math.max.apply(null, tied.map(x => x.outs)); tied = tied.filter(x => x.outs === bo);
     }
     if (tied.length > 1) { // prefer cards that are already visible; avoid feeding a purro opponent on our right
-      const next = (seat + 1) % 4, danger = g.purro[next] && next !== partnerOf(seat);
+      const next = (seat + 1) % 4, danger = g.purro[next];
       for (const x of tied) {
         x.safe = g.seen[x.d];
         if (danger) for (const h of g.history) if (h.seat === next && h.type === x.d) { x.safe += 3; break; }

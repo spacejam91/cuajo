@@ -563,6 +563,10 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
 .hand .card.keep-lock { box-shadow: 0 0 0 2px var(--warn), 0 4px 10px rgba(0, 0, 0, 0.4); }
 .hand .card.keep-lock::before { background-image: linear-gradient(rgba(240, 163, 94, 0.14), rgba(240, 163, 94, 0.14)); }
 
+/* no partners: every score chip is neutral, yours is marked */
+.dot { background: var(--fg-dim); }
+.dot.me { background: var(--accent); }
+
 </style>
 </head>
 <body>
@@ -791,8 +795,10 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
   function isKingType(t) { return rankOf(t) === KING; }
   function isKing(id) { return isKingType(cardType(id)); }
   function cardName(t) { return RANK_LABEL[rankOf(t)] + ' of ' + SUIT_LABEL[suitOf(t)]; }
+  /** The seat across the table (only a position now: everyone plays for themselves). */
   function partnerOf(seat) { return (seat + 2) % 4; }
-  function opponentsOf(seat) { return [0, 1, 2, 3].filter(p => p !== seat && p !== partnerOf(seat)); }
+  /** Everyone else at the table: there are no partners, so all three pay the winner (and pay for secrets). */
+  function opponentsOf(seat) { return [0, 1, 2, 3].filter(p => p !== seat); }
   let CURRENCY = '\u20B1';
   /** The money symbol shown in amounts (pesos by default). */
   function setCurrency(sym) { CURRENCY = sym || '\u20B1'; }
@@ -1622,7 +1628,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
       const bo = Math.max.apply(null, tied.map(x => x.outs)); tied = tied.filter(x => x.outs === bo);
     }
     if (tied.length > 1) { // prefer cards that are already visible; avoid feeding a purro opponent on our right
-      const next = (seat + 1) % 4, danger = g.purro[next] && next !== partnerOf(seat);
+      const next = (seat + 1) % 4, danger = g.purro[next];
       for (const x of tied) {
         x.safe = g.seen[x.d];
         if (danger) for (const h of g.history) if (h.seat === next && h.type === x.d) { x.safe += 3; break; }
@@ -1756,7 +1762,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
   const SI = n => (isYou(n) ? 'ikaw' : 'si ' + n);         // topic: ikaw ang... / si Nena ang...
   const KAY = n => (isYou(n) ? 'sa iyo' : 'kay ' + n);
   const GROUP = a => { const list = a.replace(/ and /g, ' at '); return (/,| at /.test(list) ? 'sina ' : 'si ') + list; };
-  const TL_SEAT = { 'the partner seat': 'kakampi mo', 'the seat on your right': 'nasa kanan mo', 'the seat on your left': 'nasa kaliwa mo' };
+  const TL_SEAT = { 'the seat across the table': 'kaharap mo', 'the seat on your right': 'nasa kanan mo', 'the seat on your left': 'nasa kaliwa mo' };
   const TL_SRC = { 'drawn from the stock': 'nabunot sa stock', 'taken from the discard pile': 'kinuha sa tapunan', 'claimed with “time” from another player’s stock draw': 'nakuha sa “time” mula sa bunot ng iba', 'claimed from another player’s shown stock draw': 'kinuha mula sa ipinakitang bunot ng iba', 'the hand was complete as dealt': 'buo na ang hawak mula pa sa deal', 'the kings were dealt to the winner': 'nasa deal pa lang, hawak na ang mga king' };
   const TL_WIN = w => (w === 'Seven kings' ? '7 kings' : w);
   const TL_START = { 'four kings of one suit': 'apat na king na pareho ang suit', prinsesa: 'prinsesa', rub: 'rub', 'seven kings': '7 kings', 'no kings': 'walang king', 'only one king': 'iisang king', 'won with the king that finishes a jack-horse-king baksyo': 'nanalo sa king na bumuo ng sota-caballo-rey na baksyo', '2 to 6 kings': '2 hanggang 6 na king' };
@@ -1784,7 +1790,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
       'Your hand is complete.': 'Buo na ang hawak mo.', 'Purro! Any of these completes your hand: ': 'Purro! Alinman dito ang bubuo sa hawak mo: ',
       'Deal': 'Mag-deal', 'New match': 'Bagong match', 'Next hand': 'Susunod na hand', 'Show result': 'Ipakita ang resulta', 'Draw from stock': 'Bumunot sa stock', 'End hand (stock empty)': 'Tapusin ang hand (ubos na ang stock)', 'Cancel secret': 'Huwag nang ilapag ang secret',
       'Discard (select a card)': 'Itapon (pumili ng baraha)', 'Select one card to discard': 'Isang baraha lang ang piliin', 'Kings can’t be discarded': 'Bawal itapon ang king',
-      'Four players, partners across the table. Press Deal to start.': 'Apat na manlalaro; magkakampi ang magkaharap. Pindutin ang Mag-deal para magsimula.',
+      'Four players, each playing for themselves. Press Deal to start.': 'Apat na manlalaro, kanya-kanya ang bawat isa. Pindutin ang Mag-deal para magsimula.',
       'The stock ran out. The hand is a draw.': 'Naubos ang stock. Tabla ang hand.', 'The stock is empty and there is nothing to take. End the hand.': 'Ubos na ang stock at walang makukuha. Tapusin ang hand.',
       'Your turn.': 'Turn mo na.', 'The stock is empty, so the hand is a draw. Press End hand.': 'Ubos na ang stock, kaya tabla ang hand. Pindutin ang Tapusin ang hand.', 'Draw a card from the stock.': 'Bumunot ng baraha sa stock.', 'You dealt, so you discard first.': 'Ikaw ang nag-deal, kaya ikaw ang unang magtatapon.', 'Choose a card to discard.': 'Pumili ng baraha na itatapon.',
       'Connection lost. Reconnecting…': 'Naputol ang koneksyon. Kumokonekta ulit…', 'Reconnected.': 'Nakakonekta ulit.',
@@ -1796,7 +1802,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
       'Base payment': 'Batayang bayad', 'Each opponent pays': 'Bayad ng bawat kalaban', 'Your balance': 'Balanse mo', 'Next dealer': 'Susunod na dealer', 'See your stats': 'Tingnan ang stats mo', 'Close': 'Isara',
       'Match over': 'Tapos na ang match', 'Match': 'Match', 'You share the match win!': 'Kasama ka sa mga nanalo sa match!', 'You win the match!': 'Panalo ka sa match!', 'share the match win.': 'ay tabla sa panalo ng match.', 'wins the match.': 'ang panalo sa match.', 'Your team': 'Team mo', 'Hand': 'Hand', 'of': 'ng', 'First to': 'Unang makaabot sa',
       'Time!': 'Time!', 'Let it go': 'Palampasin', 'Time! Claim it': 'Time! Kunin ito',
-      'Players': 'Mga manlalaro', 'Your name': 'Pangalan mo', 'Your partner, across the table': 'Kakampi mo, kaharap', 'Opponent on your right': 'Kalaban sa kanan mo', 'Opponent on your left': 'Kalaban sa kaliwa mo',
+      'Players': 'Mga manlalaro', 'Your name': 'Pangalan mo', 'Across the table': 'Kaharap mo', 'On your right': 'Nasa kanan mo', 'On your left': 'Nasa kaliwa mo', 'Across the table from me': 'Kaharap ko', 'On my right': 'Nasa kanan ko', 'Hands won: ': 'Mga panalo: ',
       'Give the computer players their original names': 'Ibalik ang orihinal na pangalan ng mga computer', 'Reset names': 'I-reset ang pangalan',
       'Game': 'Laro', 'How fast the other players move': 'Bilis ng ibang manlalaro', 'Relaxed': 'Relaks', 'Realistic': 'Parang totoo', 'Quick': 'Mabilis', 'Fast': 'Napakabilis',
       'Computer players': 'Mga computer na manlalaro', 'Easy: they make plenty of mistakes': 'Madali: madalas silang magkamali', 'Normal: they slip up now and then': 'Normal: paminsan-minsan silang nagkakamali', 'Hard: they play their best': 'Mahirap: naglalaro sila nang pinakamahusay',
@@ -1863,7 +1869,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
       [/^You drew the (.+)\.$/, 'Nabunot mo ang $1.'], [/^You took the (.+)\.$/, 'Kinuha mo ang $1.'], [/^Discard the (.+)\?$/, 'Itatapon mo ba ang $1?'],
       // notices
       [/^(.+) joined the game\.$/, (m, a) => 'Sumali ' + ACT(a) + ' sa laro.'], [/^(.+) is back in the game\.$/, (m, a) => (isYou(a) ? 'Nakabalik ka na.' : 'Nakabalik na si ' + a + '.')],
-      [/^(.+) joined and takes over (the partner seat|the seat on your right|the seat on your left)\.$/, (m, a, b) => 'Sumali ' + ACT(a) + ', at siya na ang ' + TL_SEAT[b] + '.'],
+      [/^(.+) joined and takes over (the seat across the table|the seat on your right|the seat on your left)\.$/, (m, a, b) => 'Sumali ' + ACT(a) + ', at siya na ang ' + TL_SEAT[b] + '.'],
       [/^(.+) left\. A computer player takes that seat\.$/, (m, a) => 'Umalis ' + ACT(a) + '. Computer na ang maglalaro sa puwesto niya.'],
       [/^(.+) lost the connection\. A computer player fills in until they rejoin\.$/, (m, a) => 'Naputol ang koneksyon ' + NI(a) + '. Computer muna ang maglalaro hanggang makabalik siya.'],
       [/^(.+) ended the online game\. You are back in your own game\.$/, (m, a) => 'Tinapos ' + NI(a) + ' ang online na laro. Nakabalik ka na sa sarili mong laro.'],
@@ -1900,7 +1906,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
       [/^(.+) \(computer\)$/, (m, a) => L(a) + ' (computer)'], [/^(.+) \(a person\)$/, '$1 (tao)'], [/^First to (.+)$/, 'Unang makaabot sa $1'],
       [/^Open the website to install: (.+)$/, 'Buksan ang website para i-install: $1'],
       [/^(.+) \(reconnecting…\)$/, '$1 (kumokonekta ulit…)'], [/^(.+) \(via relay\)$/, '$1 (sa relay)'],
-      [/^You joined (.+)’s game as their partner\.$/, 'Sumali ka sa laro ni $1 bilang kakampi niya.'], [/^You joined (.+)’s game as their opponent\.$/, 'Sumali ka sa laro ni $1 bilang kalaban niya.'],
+      [/^You joined (.+)’s game\.$/, 'Sumali ka sa laro ni $1.'], [/^Hands won: (\d+)$/, 'Mga panalo: $1'],
       [/^You are sharing this computer with (.+)\.$/, 'Kasama mo si $1 sa computer na ito.'], [/^Also playing: (.+)\.$/, (m, a) => 'Kasali rin ' + GROUP(a) + '.'],
       [/^Connected through relay servers \((\d+) of (\d+) reachable\)\.$/, 'Nakakonekta sa relay servers ($1 sa $2 ang naaabot).'],
       [/^Pass-and-play with (.+)$/, (m, a) => 'Pass-and-play kasama ' + GROUP(a)], [/^Online with (.+)$/, (m, a) => 'Online kasama ' + GROUP(a)], [/^Online in (.+)’s game$/, 'Online sa laro ni $1'],
@@ -2423,10 +2429,10 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
     const ib = $('#btn-install'); if (ib) { ib.hidden = !installPrompt || standaloneApp(); ib.textContent = L('Install app'); }
     const fb2 = $('#btn-full'); if (fb2) { fb2.hidden = !canFullscreen(); const on = !!fullscreenEl(); fb2.title = L(on ? 'Leave full screen' : 'Full screen'); fb2.setAttribute('aria-label', fb2.title); fb2.classList.toggle('on', on); }
     if (g.match && g.phase !== 'idle') sc.append(el('span', 'sc match', matchProgress()));
-    for (const seat of [ME, C.partnerOf(ME), (ME + 1) % 4, (ME + 3) % 4]) {
-      const us = seat % 2 === ME % 2, chip = el('span', 'sc');
-      chip.append(el('span', 'dot ' + (us ? 'us' : 'them')), el('span', 'nm', name(seat)), balanceEl(seat));
-      chip.title = (us ? 'Your side' : 'Opponents') + ' · hands won: ' + g.wins[seat];
+    for (const seat of [ME, (ME + 1) % 4, (ME + 2) % 4, (ME + 3) % 4]) {
+      const chip = el('span', 'sc');
+      chip.append(el('span', 'dot' + (seat === ME ? ' me' : '')), el('span', 'nm', name(seat)), balanceEl(seat));
+      chip.title = L('Hands won: ' + g.wins[seat]);
       sc.append(chip);
     }
   }
@@ -2443,8 +2449,6 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
     sec.classList.toggle('active', isActive(seat));
     const h = el('header');
     h.append(el('span', 'nm', name(seat)));
-    const partner = seat === C.partnerOf(ME);
-    h.append(el('span', 'tag role' + (partner ? ' us' : ''), partner ? 'your partner' : 'opponent'));
     if (isHuman(seat)) h.append(el('span', 'tag friend', 'friend'));
     if (net && net.role === 'host' && net.guests && net.guests[seat] && net.guests[seat].away) { const aw = el('span', 'tag penalty', 'away'); aw.title = 'A computer player is filling in until they rejoin'; h.append(aw); }
     if (g.phase !== 'idle' && g.dealer === seat) h.append(el('span', 'tag dealer', 'dealer'));
@@ -2475,7 +2479,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
     const add = (t, cls) => { const s = el(cls ? 'strong' : 'span', cls === 'strong' ? '' : cls, t); st.append(s); };
     if (notice) { add(notice, 'notice'); return st; }
     if (mode === 'guest' && net && net.reconnecting) { add('Connection lost. Reconnecting\u2026', 'notice'); return st; }
-    if (g.phase === 'idle') { add('Four players, partners across the table. Press Deal to start.'); return st; }
+    if (g.phase === 'idle') { add('Four players, each playing for themselves. Press Deal to start.'); return st; }
     if (dealing) { add(name(g.dealer) + (g.dealer === ME ? ' deal the cards\u2026' : ' is dealing\u2026')); return st; }
     if (mode === 'local' && promptSeat != null && g.phase !== 'over') { add('Pass the computer to ' + name(promptSeat) + '.'); return st; }
     if (g.phase === 'over') { add(g.result.type === 'draw' ? 'The stock ran out. The hand is a draw.' : winWord(g.result) + '! ' + name(g.result.winner) + ' wins the hand.'); return st; }
@@ -3050,8 +3054,8 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
       box.append(el('h2', null, 'Stock exhausted'));
       box.append(el('p', null, 'Nobody completed a hand before the stock ran out, so the hand is a draw and nobody pays (secrets already paid stand). ' + name(g.dealer) + ' deals again.'));
     } else {
-      const w = r.winner, mine = w === ME, partner = w === C.partnerOf(ME);
-      box.append(el('h2', null, winWord(r) + '! ' + (mine ? 'You win the hand' : name(w) + (partner ? ' (your partner)' : '') + ' wins the hand')));
+      const w = r.winner, mine = w === ME;
+      box.append(el('h2', null, winWord(r) + '! ' + (mine ? 'You win the hand' : name(w) + ' wins the hand')));
       const src = r.special && r.source === 'deal' ? 'the kings were dealt to the winner'
         : { stock: 'drawn from the stock', discard: 'taken from the discard pile', time: 'claimed with “time” from another player’s stock draw', claim: 'claimed from another player’s shown stock draw', deal: 'the hand was complete as dealt' }[r.source];
       box.append(el('h3', null, 'Winning hand'));
@@ -3076,8 +3080,8 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
       kv('Starting price', C.money(r.start) + ' (' + START_LABEL[r.startKind] + ')');
       for (const it of r.items || []) kv(ITEM_LABEL[it.key], it.count + ' \u00d7 ' + C.money(it.each) + ' = ' + C.money(it.amount));
       kv('Each opponent pays', C.money(r.perOpponent));
-      const delta = mine ? r.total : partner ? 0 : -r.perOpponent;
-      kv('Your balance', (delta > 0 ? '+' : '') + C.money(delta) + (partner ? ' (partners do not pay each other)' : ''));
+      const delta = mine ? r.total : -r.perOpponent;
+      kv('Your balance', (delta > 0 ? '+' : '') + C.money(delta));
       kv('Next dealer', name(g.nextDealer) + (g.dealRule === 'right' ? ' (the deal passes to the right)' : ' (the winner deals)'));
       box.append(dl);
     }
@@ -3126,8 +3130,8 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
 
     row('Language', select('lang', settings.lang, [['en', 'English'], ['tl', 'Taglish (Tagalog and English)']], v => { settings.lang = v; applyLook(); save(); render(); renderModal(true); }));
     box.append(el('h3', null, 'Players'));
-    const where = i => i === ME ? 'Your name' : i === C.partnerOf(ME) ? 'Your partner, across the table' : i === (ME + 1) % 4 ? 'Opponent on your right' : 'Opponent on your left';
-    for (const i of [ME, C.partnerOf(ME), (ME + 1) % 4, (ME + 3) % 4]) {
+    const where = i => i === ME ? 'Your name' : i === (ME + 2) % 4 ? 'Across the table' : i === (ME + 1) % 4 ? 'On your right' : 'On your left';
+    for (const i of [ME, (ME + 1) % 4, (ME + 2) % 4, (ME + 3) % 4]) {
       const fixed = mode === 'guest' || (i !== 0 && isHuman(i));
       if (fixed) {
         const r = el('div', 'row'); r.append(el('span', null, where(i)), el('span', 'fixed-name', name(i) + (isHuman(i) && i !== ME ? ' (a person)' : '')));
@@ -3190,7 +3194,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
     '<p>Cuajo (also written <i>kuajo</i> or <i>kuwaho</i>) is a Filipino rummy game of the mahjong family, played with a 112-card Spanish-suited pack: coins (<i>oros</i>), cups (<i>copas</i>), swords (<i>espadas</i>) and batons (<i>bastos</i>), each suit holding ace, 3, 4, 5, jack (<i>sota</i>), horse (<i>caballo</i>) and king (<i>rey</i>), with four identical copies of every card.</p>',
     '<p>The cards follow the traditional Spanish pattern: the ace is numbered 1, the court cards 10 (sota, the jack), 11 (caballo, the horse) and 12 (rey, the king), and the breaks in each card’s frame line show its suit: none for coins, one for cups, two for swords, three for batons.</p>',
     '<h3>Players and deal</h3>',
-    '<p>Four players in two partnerships: you and North against East and West. The dealer takes 16 cards and everyone else 15. The next card is turned face up as the <b>sowee</b>; it is never played but affects the payment. The rest is the stock. The dealer discards first, and play passes to the right (you, then East, North, West). The winner of a hand deals the next one; after a drawn hand the same player deals again.</p>',
+    '<p>Four players, each playing for themselves: there are no partners. The dealer takes 16 cards and everyone else 15. The next card is turned face up as the <b>sowee</b>; it is never played but affects the payment. The rest is the stock. The dealer discards first, and play passes to the right (you, then East, North, West). The winner of a hand deals the next one; after a drawn hand the same player deals again.</p>',
     '<h3>Your turn</h3>',
     '<ol><li>Take the top card of the stock, or the previous player’s discard (the top of the discard pile). A discard can only be taken by the next player in turn. You can never win with a discard: if the top discard would complete your hand, leave it and draw from the stock.</li><li>If you hold four identical cards, you may lay them face down as a <b>secret</b>, and each opponent pays you ₱50 at once, whether or not you win the hand. The three cards identical to the sowee also make a secret when laid down together with any fourth card from your hand; that fourth card is not free: it must still be part of a combination when you win, so a king is the usual choice.</li><li>Discard one card face up. <b>Kings are never discarded</b>, and a card you just took from the discards stays in your hand until your next turn.</li></ol>',
     '<h3>Combinations</h3>',
@@ -3201,7 +3205,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
     '<p>When one more card would complete your hand, you say <b>purro</b> after discarding and set a king face up as a marker. From then on the other players show every card they draw from the stock. If someone draws the card you need, you call <b>time</b>, take it, and win. When a shown card completes more than one hand, the player who drew it wins if it completes theirs; otherwise the first purro player after them in turn order. Whether it is your turn or not, you can only win with a card from the stock, never with a discard.</p>',
     '<p>If you draw a king that does not complete your hand and you can no longer finish with one card, you announce that you are no longer purro and take back the marker. For your next two turns you must show every card you draw and may not announce purro or win; on the third turn you play normally again.</p>',
     '<h3>Winning and payment</h3>',
-    '<p>The first player to arrange all 16 cards (secrets included) into combinations wins the hand; the winning card is the <b>bounit</b>. Each opponent pays the winner and partners pay nothing to each other. The price is a starting amount plus points for what the winning hand holds, counted in the arrangement worth the most.</p>',
+    '<p>The first player to arrange all 16 cards (secrets included) into combinations wins the hand; the winning card is the <b>bounit</b>. All three other players pay the winner. The price is a starting amount plus points for what the winning hand holds, counted in the arrangement worth the most.</p>',
     '<table><tr><th>Starting price</th><th>Each opponent pays</th></tr>',
     '<tr><td>Four kings of one suit</td><td>₱1,000</td></tr>',
     '<tr><td>Prinsesa, rub or seven kings</td><td>₱500</td></tr>',
@@ -3225,7 +3229,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
     '<p>The computer players are not perfect. On Normal they now and then miss a useful discard, throw away a slightly worse card, or fail to notice a card they could claim with \u201ctime\u201d. Easy makes them sloppier and Hard makes them play their best; choose in Settings.</p>',
     '<p>The other players take their time like real people: you can watch each one think, draw, and discard. If it feels slow, press <b>Next move</b> (or the N key) to skip the pause; every card still moves across the table so you can follow it. Each hand starts with the deal going round the table. You can also change the pace in Settings.</p>',
     '<h3>Playing with a friend</h3>',
-    '<p>Press <b>Play with a friend</b>. <b>On this computer</b>, you take turns: your cards are hidden between turns and the game asks you to pass the computer when it is the other person\u2019s go. <b>Online</b>, one of you starts a game and sends the code or link; the other joins with it, and each plays on their own computer. Your friend plays as your partner or as an opponent, and computer players fill the other seats. Online play needs the website version of the game (' + PAGES_URL + ') or the downloaded file.</p>',
+    '<p>Press <b>Play with a friend</b>. <b>On this computer</b>, you take turns: your cards are hidden between turns and the game asks you to pass the computer when it is the other person\u2019s go. <b>Online</b>, one of you starts a game and sends the code or link; the other joins with it, and each plays on their own computer. Your friend sits across the table or on your right, and computer players fill the other seats. Online play needs the website version of the game (' + PAGES_URL + ') or the downloaded file.</p>',
     '<p><b>Settings</b> lets you rename the players, choose the table and card backs, card size, pesos or dollars, sounds, where picked-up cards go, and whether the winner or the next player deals after a win.</p>',
     '<p>Online, up to three friends can join one game; each takes over a computer player\u2019s seat, even in the middle of a game. Use <b>Chat</b> to send quick messages that pop up over your seat. In Settings you can play a <b>match</b> (8 or 16 hands, or first to a money target) and see <b>your stats</b>.</p>',
     '<h3>House choices in this version</h3>',
@@ -3455,7 +3459,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
     }
     return null;
   }
-  function seatWord(seat) { return seat === 2 ? 'the partner seat' : seat === 1 ? 'the seat on your right' : 'the seat on your left'; }
+  function seatWord(seat) { return seat === 2 ? 'the seat across the table' : seat === 1 ? 'the seat on your right' : 'the seat on your left'; }
   function hostIncoming(msg, via) {
     if (!msg || !net || net.role !== 'host') return;
     const mine = net;
@@ -3690,7 +3694,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
     if (mode === 'guest') return 'Online in ' + name(0) + '’s game';
     return 'Play with a friend';
   }
-  function seatLabel(s) { return s === 2 ? 'Your partner, across the table' : s === 1 ? 'Opponent on your right' : 'Opponent on your left'; }
+  function seatLabel(s) { return s === 2 ? 'Across the table' : s === 1 ? 'On your right' : 'On your left'; }
   function friendBox() {
     const box = el('div', 'box friend');
     box.append(el('h2', null, 'Play with a friend'));
@@ -3724,7 +3728,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
       return box;
     }
     if (mode !== 'solo') {
-      const who = mode === 'guest' ? 'You joined ' + name(0) + '’s game as ' + (C.partnerOf(ME) === 0 ? 'their partner.' : 'their opponent.')
+      const who = mode === 'guest' ? 'You joined ' + name(0) + '’s game.'
         : 'You are sharing this computer with ' + humanNames[Object.keys(humanNames)[0]] + '.';
       box.append(el('p', null, who));
       if (mode === 'guest') {
@@ -3745,7 +3749,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
     const me = el('input'); me.type = 'text'; me.id = 'friend-myname'; me.maxLength = 14; me.placeholder = L('Your name'); me.value = settings.names[0] === 'You' ? '' : settings.names[0];
     row('Your name', me);
     const seat = el('select'); seat.id = 'friend-seat';
-    for (const [v, t] of [['2', 'My partner (across the table)'], ['1', 'My opponent (on my right)']]) { const o = el('option', null, t); o.value = v; seat.append(o); }
+    for (const [v, t] of [['2', 'Across the table from me'], ['1', 'On my right']]) { const o = el('option', null, t); o.value = v; seat.append(o); }
     row('My (first) friend plays as', seat);
     box.append(form);
     box.append(el('h3', null, 'Online, each on your own device'));
@@ -3849,8 +3853,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
       box.append(el('p', 'match-win', mine ? (m.winners.length > 1 ? 'You share the match win!' : 'You win the match!') : joinNames(m.winners.map(name)) + (m.winners.length > 1 ? ' share the match win.' : ' wins the match.')));
     } else box.append(el('p', null, matchProgress()));
     const dl = el('dl', 'kv');
-    for (const s of [ME, C.partnerOf(ME), (ME + 1) % 4, (ME + 3) % 4]) dl.append(el('dt', null, name(s)), el('dd', null, C.money(sc[s])));
-    dl.append(el('dt', null, 'Your team'), el('dd', null, C.money(sc[ME] + sc[C.partnerOf(ME)])));
+    for (const s of [ME, (ME + 1) % 4, (ME + 2) % 4, (ME + 3) % 4]) dl.append(el('dt', null, name(s)), el('dd', null, C.money(sc[s])));
     box.append(dl);
   }
 
@@ -3956,7 +3959,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
     '<p>Ang Cuajo (kuajo o kuwaho) ay Filipino rummy na kamag-anak ng mahjong. Ginagamit ang 112 barahang Espanyol: oros, copas, espadas at bastos. Bawat suit ay may as, tres, cuatro, cinco, sota, caballo at rey, at tig-apat na kopya ang bawat baraha.</p>',
     '<p>Sa baraha, 1 ang as, 10 ang sota, 11 ang caballo at 12 ang rey. Makikita ang suit sa mga puwang sa linya ng frame: wala sa oros, isa sa copas, dalawa sa espadas, tatlo sa bastos.</p>',
     '<h3>Manlalaro at deal</h3>',
-    '<p>Apat ang naglalaro, at magkakampi ang magkaharap. Labing-anim na baraha ang hawak ng dealer at labinlima naman ang sa iba. Ang susunod na baraha ay ibinubukas bilang <b>sowee</b>: hindi ito nilalaro pero may epekto sa bayad. Ang matitira ang magiging stock. Ang dealer ang unang magtatapon, at pakanan ang ikot ng laro. Ang nanalo ang magde-deal sa susunod; kapag tabla, parehong dealer ulit.</p>',
+    '<p>Apat ang naglalaro, at kanya-kanya ang bawat isa: walang magkakampi. Labing-anim na baraha ang hawak ng dealer at labinlima naman ang sa iba. Ang susunod na baraha ay ibinubukas bilang <b>sowee</b>: hindi ito nilalaro pero may epekto sa bayad. Ang matitira ang magiging stock. Ang dealer ang unang magtatapon, at pakanan ang ikot ng laro. Ang nanalo ang magde-deal sa susunod; kapag tabla, parehong dealer ulit.</p>',
     '<h3>Sa turn mo</h3>',
     '<ol><li>Bumunot sa stock, o kunin ang huling itinapon ng naunang manlalaro. Ang susunod lang sa turn ang puwedeng kumuha ng itinapon. Hindi ka puwedeng manalo gamit ang itinapon: kung bubuo sa hawak mo ang huling itinapon, iwan ito at bumunot sa stock.</li><li>Kung may apat kang magkaparehong baraha, puwede mo itong ilapag nang nakataob bilang <b>secret</b>, at magbabayad agad sa iyo ng ₱50 ang bawat kalaban, manalo ka man o hindi. Ang tatlong kapareho ng sowee, kasama ang kahit anong ikaapat na baraha, ay secret din; pero kailangan pa ring bahagi ng kombinasyon ang ikaapat na iyon sa pagpanalo, kaya king ang karaniwang pinipili.</li><li>Magtapon ng isang baraha. <b>Hindi puwedeng itapon ang king</b>, at ang barahang kakakuha mo lang sa tapunan ay hindi muna puwedeng itapon hanggang sa susunod mong turn.</li></ol>',
     '<h3>Mga kombinasyon</h3>',
@@ -3967,7 +3970,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
     '<p>Kapag isang baraha na lang ang kulang mo, sabihin ang <b>purro</b> pagkatapos magtapon at maglabas ng isang king bilang marker. Mula noon, ipinapakita ng iba ang bawat bunot nila sa stock. Kapag may nakabunot ng barahang kailangan mo, sabihin ang <b>time</b>, kunin ito, at panalo ka. Kung higit sa isa ang nangangailangan ng parehong baraha, panalo ang bumunot kung bubuo rin ito sa hawak niya; kung hindi, panalo ang unang naka-purro na kasunod niya. Turn mo man o hindi, puwede ka lang manalo sa barahang galing sa stock, hindi sa itinapon.</p>',
     '<p>Kapag nasira ang purro mo (halimbawa, nakabunot ka ng king na hindi bumuo), hindi ka na naka-purro. Sa susunod na dalawang turn, ipapakita mo ang bawat bunot at bawal kang mag-purro o manalo; sa ikatlong turn, normal na ulit.</p>',
     '<h3>Pagpanalo at bayad</h3>',
-    '<p>Panalo ang unang makabuo ng 16 na baraha (kasama ang secret) sa mga kombinasyon; ang panalong baraha ay ang <b>bounit</b>. Nagbabayad sa nanalo ang bawat kalaban, at hindi nagbabayaran ang magkakampi. Ang bayad ay panimulang halaga at dagdag para sa laman ng panalong hawak, sa ayos na pinakamalaki ang halaga.</p>',
+    '<p>Panalo ang unang makabuo ng 16 na baraha (kasama ang secret) sa mga kombinasyon; ang panalong baraha ay ang <b>bounit</b>. Nagbabayad sa nanalo ang tatlong ibang manlalaro. Ang bayad ay panimulang halaga at dagdag para sa laman ng panalong hawak, sa ayos na pinakamalaki ang halaga.</p>',
     '<table><tr><th>Panimulang bayad</th><th>Bayad ng bawat kalaban</th></tr>',
     '<tr><td>Apat na king na pareho ang suit</td><td>₱1,000</td></tr>',
     '<tr><td>Prinsesa, rub o 7 kings</td><td>₱500</td></tr>',

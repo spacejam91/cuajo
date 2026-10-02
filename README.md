@@ -1,8 +1,8 @@
 # Cuajo
 
 A browser version of **Cuajo** (kuajo / kuwaho), the Filipino rummy game of the mahjong family,
-played with a 112-card Spanish-suited pack. You play South with a computer partner (North)
-against two computer opponents (East, West). Rules follow https://www.pagat.com/rummy/cuajo.html
+played with a 112-card Spanish-suited pack. You play South against three computer players, each playing
+for themselves. Rules follow https://www.pagat.com/rummy/cuajo.html plus the family house rules below.
 
 ## Play
 
@@ -73,6 +73,7 @@ shadows, with a Spanish-style lattice back.
 
 ## House rules (family table)
 
+- No partners: everyone plays for themselves, so all three other players pay the winner and pay for secrets.
 - You can only win with a card from the stock, never with a discard. When the stock is empty the hand is a draw.
 - A card taken from the discards stays in your hand until your next turn.
 - Straight from the deal, a rub comes up about once in 14 hands and a prinsesa about once in 37. A plain shuffle

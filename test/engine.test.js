@@ -228,7 +228,7 @@ ok(wins + draws === NG, 'every hand ended');
     gs.phase = 'discard'; gs.turn = 0; gs.drawn = null;
     const before = gs.balances.slice();
     C.declareSecret(gs, 0, T(1,4), null);
-    ok(gs.balances[0] - before[0] === 2 * C.SECRET_PAY && C.opponentsOf(0).every(p => before[p] - gs.balances[p] === C.SECRET_PAY), 'a secret is paid at once by each opponent');
+    ok(C.opponentsOf(0).length === 3 && gs.balances[0] - before[0] === 3 * C.SECRET_PAY && C.opponentsOf(0).every(p => before[p] - gs.balances[p] === C.SECRET_PAY), 'no partners: a secret is paid at once by all three other players');
   }
   // four kings of the same suit start at 1000
   gp.secrets[0] = [];

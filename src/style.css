@@ -544,3 +544,7 @@ html[data-back="blue"] .card.back::after { box-shadow: inset 0 0 0 2px rgba(20, 
 /* the card you just took from the discards stays until your next turn */
 .hand .card.keep-lock { box-shadow: 0 0 0 2px var(--warn), 0 4px 10px rgba(0, 0, 0, 0.4); }
 .hand .card.keep-lock::before { background-image: linear-gradient(rgba(240, 163, 94, 0.14), rgba(240, 163, 94, 0.14)); }
+
+/* no partners: every score chip is neutral, yours is marked */
+.dot { background: var(--fg-dim); }
+.dot.me { background: var(--accent); }
