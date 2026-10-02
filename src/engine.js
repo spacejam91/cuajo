@@ -352,9 +352,10 @@
     };
   }
 
-  /** House feel: a plain shuffle deals someone three kings of one suit about once in 9 hands, more often than
-      it happens at the family table (once in 10 at most), so a share of those deals is shuffled again. */
-  const REDEAL_RUB = 0.45;
+  /** House feel: a plain shuffle deals someone three kings of one suit about once in 9 hands and a prinsesa about
+      once in 16, more often than at the family table (a rub once in 10 at most, a prinsesa rarer still), so a share
+      of those deals is shuffled again. */
+  const REDEAL_RUB = 0.45, REDEAL_PRINSESA = 0.6;
   function shuffleAndDeal(g) {
     const deck = []; for (let i = 0; i < NCARDS; i++) deck.push(i);
     for (let i = NCARDS - 1; i > 0; i--) { const j = randInt(g, i + 1); const tmp = deck[i]; deck[i] = deck[j]; deck[j] = tmp; }
@@ -371,10 +372,22 @@
     for (let p = 0; p < 4; p++) { const c = countsOf(g.hands[p]); for (let s = 0; s < 4; s++) if (c[typeOf(s, KING)] >= 3) return true; }
     return false;
   }
+  function dealtPrinsesa(g) {
+    for (let p = 0; p < 4; p++) {
+      const c = countsOf(g.hands[p]); let n = 0, suits = 0;
+      for (let s = 0; s < 4; s++) { const k = c[typeOf(s, KING)]; n += k; if (k) suits++; }
+      if (n === 4 && suits === 4) return true;
+    }
+    return false;
+  }
   function startHand(g) {
     g.handNo++;
     shuffleAndDeal(g);
-    if (dealtRub(g) && nextRand(g) < REDEAL_RUB) shuffleAndDeal(g);
+    for (let tries = 0; tries < 2; tries++) {
+      const again = (dealtRub(g) && nextRand(g) < REDEAL_RUB) || (dealtPrinsesa(g) && nextRand(g) < REDEAL_PRINSESA);
+      if (!again) break;
+      shuffleAndDeal(g);
+    }
     g.secrets = [[], [], [], []];
     g.purro = [false, false, false, false]; g.waiting = [[], [], [], []]; g.marker = [null, null, null, null]; g.penalty = [0, 0, 0, 0];
     g.discards = []; g.discardedBy = []; g.history = []; g.seen = new Array(NTYPES).fill(0); g.seenIds = {};
@@ -881,7 +894,7 @@
     SUITS, SUIT_LABEL, SUIT_ES, RANKS, RANK_LABEL, RANK_ES, ACE, KING, NTYPES, NCARDS, HAND, SECRET_PAY,
     setCurrency, typeOf, suitOf, rankOf, cardType, isKing, isKingType, cardName, partnerOf, opponentsOf, money, countsOf,
     canPartition, partition, bestKeep, distance, keepPlan, waitingTypes, usefulTypes, goesWith,
-    BAKSYO, isBaksyo, completeB, partitionB, keepPlanB, bestKeepB, secretB, planFor, kingWin, kingCount, rubClaimant, blockedType, dealtRub, REDEAL_RUB, resolveRub, declareRub, maxSameKing, specialNow, anyKing, needsBaksyo, PRICE, priceWin, bestScoring, groupPoints,
+    BAKSYO, isBaksyo, completeB, partitionB, keepPlanB, bestKeepB, secretB, planFor, kingWin, kingCount, rubClaimant, blockedType, dealtRub, dealtPrinsesa, REDEAL_RUB, REDEAL_PRINSESA, resolveRub, declareRub, maxSameKing, specialNow, anyKing, needsBaksyo, PRICE, priceWin, bestScoring, groupPoints,
     newGame, startHand, nextHand, handCounts, poolIds, poolCounts, extrasOf, slotsFor, isComplete, completesWith, mayWin, topDiscard, currentClaimant, legalActions,
     drawStock, takeDiscard, resolveTime, secretOptions, declareSecret, discard, endHandDraw,
     aiChooseDraw, aiChooseRub, aiChooseSecret, aiChooseDiscard, aiClaimsTime, analyze, DIFFICULTY, setDifficulty, mistakeRate,

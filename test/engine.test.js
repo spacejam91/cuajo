@@ -410,9 +410,10 @@ ok(wins + draws === NG, 'every hand ended');
     }
   }
   ok(tested >= 10, 'taken-card rule exercised (' + tested + ' times)');
-  let rubs = 0; const ND = 3000;
-  for (let i = 0; i < ND; i++) { const gd = C.newGame({ seed: 50000 + i, human: -1 }); C.startHand(gd); if (C.dealtRub(gd)) rubs++; }
+  let rubs = 0, prins = 0; const ND = 4000;
+  for (let i = 0; i < ND; i++) { const gd = C.newGame({ seed: 50000 + i, human: -1 }); C.startHand(gd); if (C.dealtRub(gd)) rubs++; if (C.dealtPrinsesa(gd)) prins++; }
   ok(rubs / ND < 0.1, 'a rub straight from the deal comes up less than once in 10 hands (' + (100 * rubs / ND).toFixed(1) + '%)');
-  console.log('taken discards stay a turn (' + tested + ' checks); dealt rubs ' + (100 * rubs / ND).toFixed(1) + '% of hands');
+  ok(prins < rubs && prins / ND < 0.05, 'a prinsesa straight from the deal is rarer than a rub (' + (100 * prins / ND).toFixed(1) + '%)');
+  console.log('taken discards stay a turn (' + tested + ' checks); dealt rubs ' + (100 * rubs / ND).toFixed(1) + '%, dealt prinsesas ' + (100 * prins / ND).toFixed(1) + '% of hands');
 }
 console.log('all engine checks passed:', passed);
