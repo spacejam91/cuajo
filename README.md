@@ -79,7 +79,8 @@ shadows, with a Spanish-style lattice back.
 - Straight from the deal, a rub comes up about once in 14 hands and a prinsesa about once in 37. A plain shuffle
   would give about one in 9 and one in 16, so a share of those deals is shuffled again to match the family table.
 - Pong: three or four identical cards make a combination.
-- Baksyo: a hand that holds any king must include three or four aces, or 3-4-5 or jack-horse-king of one suit.
+- Baksyo: a hand that holds any king must include any pong, three or four aces, or 3-4-5 or jack-horse-king of one suit.
+  A laid secret counts as the baksyo.
   A hand with no kings needs no baksyo.
 - Special king wins, for anyone, purro or not, straight from the deal or after a stock draw:
   prinsesa (exactly four kings, one per suit), rub (three or four kings of one suit; a shown stock card can be

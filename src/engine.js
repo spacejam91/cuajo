@@ -230,8 +230,13 @@
     const A = [0, 1, 2, 3].map(s => typeOf(s, ACE));
     for (let skip = 0; skip < 4; skip++) out.push(A.filter((x, i) => i !== skip));
     out.push(A.slice());
-    for (const a of A) { out.push([a, a, a]); out.push([a, a, a, a]); }
-    return out.map(types => { const need = {}; for (const t of types) need[t] = (need[t] || 0) + 1; return { types, need: Object.keys(need).map(k => [+k, need[k]]) }; });
+    // any pong (three or four identical cards) is a baksyo too; a pong of kings is already a rub
+    for (let t = 0; t < NTYPES; t++) if (!isKingType(t)) { out.push([t, t, t]); out.push([t, t, t, t]); }
+    return out.map(types => {
+      const need = {}; for (const t of types) need[t] = (need[t] || 0) + 1;
+      const pongOf = types.every(x => x === types[0]) && rankOf(types[0]) !== ACE ? types[0] : null;
+      return { types, need: Object.keys(need).map(k => [+k, need[k]]), pongOf };
+    });
   })();
   function hasAll(c, B) { return B.need.every(p => c[p[0]] >= p[1]); }
   /** True when the cards (a multiset of types) are exactly one baksyo group. */
@@ -239,7 +244,7 @@
     const c = countsOf([]); for (const t of types) c[t]++;
     return BAKSYO.some(B => B.types.length === types.length && hasAll(c, B));
   }
-  function baksyoKind(types) { if (rankOf(types[0]) !== ACE) return 'run'; return types.every(x => x === types[0]) ? 'pong' : 'set'; }
+  function baksyoKind(types) { if (types.every(x => x === types[0])) return 'pong'; return rankOf(types[0]) === ACE ? 'set' : 'run'; }
   /** House rule: a hand with no kings at all does not need a baksyo; any king makes the baksyo required. */
   function anyKing(counts) { for (let s = 0; s < 4; s++) if (counts[typeOf(s, KING)] > 0) return true; return false; }
   function needsBaksyo(counts, hasB) { return !hasB && anyKing(counts); }
@@ -275,6 +280,8 @@
     const c = counts.slice(); let best = null, zeroDone = false;
     for (const B of BAKSYO) {
       if (B.types.length > slots) continue;
+      // planning shortcut: a pong is only worth aiming for with two of the card in hand (four for a pong of four)
+      if (B.pongOf != null && c[B.pongOf] < (B.types.length === 4 ? 4 : 2)) continue;
       let k = 0; const got = [];
       for (const p of B.need) { const h = Math.min(c[p[0]], p[1]); if (h) { got.push([p[0], h]); k += h; } }
       if (!k) { if (B.types.length !== 3 || zeroDone) continue; zeroDone = true; }
@@ -302,7 +309,7 @@
     const rest = keepPlan(c, slots - b.B.types.length);
     if (!types.length) return rest;
     const whole = canPartition(countsOfTypes(types));
-    const kind = whole ? baksyoKind(types) : types.length === 1 ? 'seed' : rankOf(types[0]) !== ACE ? 'run2' : types[0] === types[1] ? 'pong2' : 'set2';
+    const kind = whole ? baksyoKind(types) : types.length === 1 ? 'seed' : types[0] === types[1] ? 'pong2' : rankOf(types[0]) === ACE ? 'set2' : 'run2';
     return [{ types, kind, baksyo: true }].concat(rest);
   }
   function countsOfTypes(types) { const c = countsOf([]); for (const t of types) c[t]++; return c; }
@@ -448,8 +455,8 @@
   function poolCounts(g, seat) { return countsOf(poolIds(g, seat)); }
   /** How many of the 16 places are not yet filled by laid secrets (a four-card secret fills 4, a sowee secret 3). */
   function slotsFor(g, seat) { let n = HAND; for (const s of g.secrets[seat]) n -= s.kind === 'four' ? 4 : 3; return n; }
-  /** A secret of aces laid on the table already counts as the hand's baksyo. */
-  function secretB(g, seat) { return g.secrets[seat].some(s => rankOf(s.type) === ACE); }
+  /** A laid secret is identical cards (a pong), so it already counts as the hand's baksyo. */
+  function secretB(g, seat) { return g.secrets[seat].length > 0; }
   function isComplete(g, seat) { return poolIds(g, seat).length === slotsFor(g, seat) && completeB(poolCounts(g, seat), secretB(g, seat)); }
   function completesWith(g, seat, t) {
     if (poolIds(g, seat).length + 1 !== slotsFor(g, seat)) return false;

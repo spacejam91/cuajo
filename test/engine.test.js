@@ -88,13 +88,16 @@ ok(C.canPartition(countsFromTypes([T(0, 0), T(1, 0), T(2, 0)])), 'set of aces va
 ok(!C.canPartition(countsFromTypes([T(0, 0), T(0, 0), T(2, 0)])), 'set with repeated suit invalid');
 ok(C.canPartition(countsFromTypes([T(3, 2), T(3, 2), T(3, 2), T(3, 2)])), 'secret valid');
 ok(C.canPartition(countsFromTypes([T(3, 2), T(3, 2), T(3, 2)])), 'three identical cards make a pong');
-ok(!C.completeB(countsFromTypes([T(3, 2), T(3, 2), T(3, 2), T(0, 6)])), 'a pong and a king are not a win without a baksyo');
+ok(C.completeB(countsFromTypes([T(3, 2), T(3, 2), T(3, 2), T(0, 6)])), 'any pong is a baksyo: a pong and a king win');
+ok(C.completeB(countsFromTypes([T(1, 5), T(1, 5), T(1, 5), T(1, 5), T(2, 6)])), 'a pong of four is a baksyo too');
+ok(!C.completeB(countsFromTypes([T(0, 2), T(1, 2), T(2, 2), T(1, 1), T(2, 1), T(3, 1), T(0, 6)])), 'two sets of non-aces and a king are not a win without a baksyo');
 ok(C.completeB(countsFromTypes([T(0, 0), T(1, 0), T(2, 0), T(0, 6)])), 'three aces are a baksyo');
 ok(C.completeB(countsFromTypes([T(2, 0), T(2, 0), T(2, 0)])), 'a pong of aces is a baksyo');
 ok(C.completeB(countsFromTypes([T(1, 4), T(1, 5), T(1, 6)])) && C.completeB(countsFromTypes([T(3, 1), T(3, 2), T(3, 3)])), 'runs are baksyos');
 ok(!C.completeB(countsFromTypes([T(0, 2), T(1, 2), T(2, 2), T(3, 6)])), 'a set of fours is not a baksyo');
 ok(C.completeB(countsFromTypes([T(0, 2), T(1, 2), T(2, 2)])), 'with no kings at all, no baksyo is needed');
-ok(C.completeB(countsFromTypes([T(3, 2), T(3, 2), T(3, 2), T(1, 1), T(2, 1), T(3, 1)])) && !C.completeB(countsFromTypes([T(3, 2), T(3, 2), T(3, 2), T(1, 1), T(2, 1), T(3, 1), T(2, 6)])), 'a king makes the baksyo required');
+ok(C.completeB(countsFromTypes([T(0, 2), T(1, 2), T(2, 2), T(1, 1), T(2, 1), T(3, 1)])) && !C.completeB(countsFromTypes([T(0, 2), T(1, 2), T(2, 2), T(1, 1), T(2, 1), T(3, 1), T(2, 6)])), 'a king makes the baksyo required');
+ok(C.isBaksyo([T(2, 4), T(2, 4), T(2, 4)]) && !C.isBaksyo([T(0, 4), T(1, 4), T(2, 4)]), 'a pong of jacks is a baksyo, a set of jacks is not');
 // a full 16-card hand: 5 sets/runs + a king
 const full16 = [T(0,1),T(0,2),T(0,3), T(1,4),T(1,5),T(1,6), T(0,0),T(1,0),T(2,0), T(2,3),T(3,3),T(0,3), T(1,1),T(2,1),T(3,1), T(3,6)];
 ok(C.canPartition(countsFromTypes(full16)), '16-card complete hand');
