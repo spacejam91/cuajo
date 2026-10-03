@@ -74,7 +74,8 @@ shadows, with a Spanish-style lattice back.
 ## House rules (family table)
 
 - No partners: everyone plays for themselves, so all three other players pay the winner and pay for secrets.
-- You can only win with a card from the stock, never with a discard. When the stock is empty the hand is a draw.
+- You can only win with a card from the stock, never with a discard. You may still take a discard that would complete
+  your hand, even when purro; it does not win, and you discard a different card. When the stock is empty the hand is a draw.
 - A card taken from the discards stays in your hand until your next turn.
 - Straight from the deal, a rub comes up about once in 14 hands and a prinsesa about once in 37. A plain shuffle
   would give about one in 9 and one in 16, so a share of those deals is shuffled again to match the family table.
@@ -92,7 +93,7 @@ shadows, with a Spanish-style lattice back.
 | Starting price | |
 |---|---|
 | Four kings of one suit | 1,000 |
-| Prinsesa, rub, seven kings, no kings, only one king, singrey (every king held is in a jack-horse-king baksyo), or winning with the king that finishes a jack-horse-king baksyo | 500 |
+| Prinsesa, rub, seven kings, no kings, only one king, singrey (every king held, however many, paired with the 10 and 11 of its suit), or winning with the king that finishes a jack-horse-king baksyo | 500 |
 | Any other win (2 to 6 kings) | 200 |
 
 Plus 5 per king, 5 per 3-4-5 run, 10 per jack-horse-king run, 20 per pong, 5 for three aces, 10 for four aces,

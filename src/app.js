@@ -185,7 +185,7 @@
       [/^(.+) is drawing…$/, (m, a) => 'Bumubunot ' + ACT(a) + '…'], [/^(.+) is choosing a discard…$/, (m, a) => 'Pumipili ' + ACT(a) + ' ng itatapon…'],
       [/^The stock is empty, but the (.+) completes your hand: take it to win, or end the hand\.$/, 'Ubos na ang stock, pero bubuo sa hawak mo ang $1: kunin ito para manalo, o tapusin ang hand.'],
       [/^The stock is empty and the (.+) does not complete your hand\. End the hand\.$/, 'Ubos na ang stock at hindi bubuo sa hawak mo ang $1. Tapusin ang hand.'],
-      [/^The (.+) would complete your hand, but a winning card has to come from the stock\. Draw from the stock\.$/, 'Bubuo sana sa hawak mo ang $1, pero sa stock lang dapat manggaling ang panalong baraha. Bumunot sa stock.'],
+      [/^The (.+) would complete your hand, but a winning card has to come from the stock\. Draw from the stock, or take it and discard a different card\.$/, 'Bubuo sana sa hawak mo ang $1, pero sa stock lang dapat manggaling ang panalong baraha. Bumunot sa stock, o kunin ito at magtapon ng ibang baraha.'],
       [/^Draw from the stock, or take the (.+) from the discard pile\.$/, 'Bumunot sa stock, o kunin ang $1 mula sa tapunan.'],
       [/^Your purro was broken: this draw is shown and you cannot win for (\d+) more turns?\.$/, 'Nasira ang purro mo: ipapakita ang bunot na ito, at hindi ka puwedeng manalo sa susunod na $1 turn.'],
       [/^Choose any fourth card from your hand to lay down with your three (.+) cards\.$/, 'Pumili ng ikaapat na baraha na ilalapag kasama ng tatlong $1.'],
@@ -824,7 +824,7 @@
       const pen = g.penalty[ME] > 0 ? ' Your purro was broken: this draw is shown and you cannot win for ' + plural(g.penalty[ME], 'more turn') + '.' : '';
       if (!g.stock.length) { add('The stock is empty, so the hand is a draw. Press End hand.'); return st; }
       if (top == null) { add('Your turn. Draw a card from the stock.' + pen); return st; }
-      if (completesMe(C.cardType(top))) { add('The ' + cn(C.cardType(top)) + ' would complete your hand, but a winning card has to come from the stock. Draw from the stock.' + pen); return st; }
+      if (completesMe(C.cardType(top))) { add('The ' + cn(C.cardType(top)) + ' would complete your hand, but a winning card has to come from the stock. Draw from the stock, or take it and discard a different card.' + pen); return st; }
       add('Your turn. Draw from the stock, or take the ' + cn(C.cardType(top)) + ' from the discard pile.' + pen);
       return st;
     }
@@ -1285,7 +1285,7 @@
       const takeIt = myTurn('draw') && top != null && g.stock.length && !completesMe(C.cardType(top)) && C.aiChooseDraw(g, ME) === 'discard';
       if (takeIt) hint.append(L('Hint: take the ' + cn(C.cardType(top)) + ' from the discard pile. It brings you closer than a blind draw.'));
       else if (a.n === a.slots) {
-        if (a.complete) hint.append(L('Your hand is complete.'));
+        if (a.complete && g.drawnFrom !== 'discard') hint.append(L('Your hand is complete.'));   // a card from the discards never wins
         else if (a.bestDiscard) hint.append(L('Hint: discarding the ' + cn(a.bestDiscard.type) + ' leaves you ' + plural(a.bestDiscard.distance, 'card') + ' from a complete hand.'));
       } else if (a.n === a.slots - 1) {
         if (a.waiting.length) { hint.append(L('Purro! Any of these completes your hand: ')); hint.append(miniRow(a.waiting)); }
@@ -1302,7 +1302,7 @@
       if (C.legalActions(g, ME).declareRub) bar.append(btn('Win now with the rub', onDeclareRub, 'primary'));
       const top = C.topDiscard(g);
       if (g.stock.length) bar.append(btn('Draw from stock', onStock, top == null ? 'primary' : ''));
-      if (top != null && C.legalActions(g, ME).takeDiscard) { const b = btn('Take the ' + cn(C.cardType(top)), onTake, completesMe(C.cardType(top)) && g.penalty[ME] === 0 ? 'primary' : ''); bar.append(b); }
+      if (top != null && C.legalActions(g, ME).takeDiscard) bar.append(btn('Take the ' + cn(C.cardType(top)), onTake));
       if (!g.stock.length) bar.append(btn('End hand (stock empty)', onEnd));
     } else if (myTurn('discard')) {
       if (C.legalActions(g, ME).declareRub && pickExtra == null) bar.append(btn('Win now with the rub', onDeclareRub));
@@ -1519,7 +1519,7 @@
     '<h3>Players and deal</h3>',
     '<p>Four players, each playing for themselves: there are no partners. The dealer takes 16 cards and everyone else 15. The next card is turned face up as the <b>sowee</b>; it is never played but affects the payment. The rest is the stock. The dealer discards first, and play passes to the right (you, then East, North, West). The winner of a hand deals the next one; after a drawn hand the same player deals again.</p>',
     '<h3>Your turn</h3>',
-    '<ol><li>Take the top card of the stock, or the previous player’s discard (the top of the discard pile). A discard can only be taken by the next player in turn. You can never win with a discard: if the top discard would complete your hand, leave it and draw from the stock.</li><li>If you hold four identical cards, you may lay them face down as a <b>secret</b>, and each opponent pays you ₱50 at once, whether or not you win the hand. The three cards identical to the sowee also make a secret when laid down together with any fourth card from your hand; that fourth card is not free: it must still be part of a combination when you win, so a king is the usual choice.</li><li>Discard one card face up. <b>Kings are never discarded</b>, and a card you just took from the discards stays in your hand until your next turn.</li></ol>',
+    '<ol><li>Take the top card of the stock, or the previous player’s discard (the top of the discard pile). A discard can only be taken by the next player in turn. You can never win with a discard. You may still take one that would complete your hand, even when purro, but it does not win: you keep it and discard a different card.</li><li>If you hold four identical cards, you may lay them face down as a <b>secret</b>, and each opponent pays you ₱50 at once, whether or not you win the hand. The three cards identical to the sowee also make a secret when laid down together with any fourth card from your hand; that fourth card is not free: it must still be part of a combination when you win, so a king is the usual choice.</li><li>Discard one card face up. <b>Kings are never discarded</b>, and a card you just took from the discards stays in your hand until your next turn.</li></ol>',
     '<h3>Combinations</h3>',
     '<ul><li><b>Set</b>: three or four cards of the same rank in different suits.</li><li><b>Run</b>: 3-4-5 or jack-horse-king in one suit (aces never run).</li><li><b>Pong</b>: three or four identical cards (same rank and suit).</li><li><b>Secret</b>: four identical cards laid face down.</li><li><b>King</b>: a king counts as a combination on its own.</li></ul>',
     '<h3>Baksyo</h3>',
@@ -1533,7 +1533,7 @@
     '<tr><td>Four kings of one suit</td><td>₱1,000</td></tr>',
     '<tr><td>Prinsesa, rub or seven kings</td><td>₱500</td></tr>',
     '<tr><td>A win with no kings, or with only one king</td><td>₱500</td></tr>',
-    '<tr><td><b>Singrey</b>: every king you hold (2 to 6 of them) is used as baksyo in a jack-horse-king run</td><td>₱500</td></tr>',
+    '<tr><td><b>Singrey</b>: every king you hold, however many, is paired with the jack (10) and horse (11) of its own suit as a baksyo run</td><td>₱500</td></tr>',
     '<tr><td>Winning with the king that finishes your jack-horse-king baksyo (you hold the jack and horse of a suit and the king of that suit is your winning card)</td><td>₱500</td></tr>',
     '<tr><td>Any other win (2 to 6 kings)</td><td>₱200</td></tr>',
     '<tr><th>Plus</th><th></th></tr>',
@@ -2285,7 +2285,7 @@
     '<h3>Manlalaro at deal</h3>',
     '<p>Apat ang naglalaro, at kanya-kanya ang bawat isa: walang magkakampi. Labing-anim na baraha ang hawak ng dealer at labinlima naman ang sa iba. Ang susunod na baraha ay ibinubukas bilang <b>sowee</b>: hindi ito nilalaro pero may epekto sa bayad. Ang matitira ang magiging stock. Ang dealer ang unang magtatapon, at pakanan ang ikot ng laro. Ang nanalo ang magde-deal sa susunod; kapag tabla, parehong dealer ulit.</p>',
     '<h3>Sa turn mo</h3>',
-    '<ol><li>Bumunot sa stock, o kunin ang huling itinapon ng naunang manlalaro. Ang susunod lang sa turn ang puwedeng kumuha ng itinapon. Hindi ka puwedeng manalo gamit ang itinapon: kung bubuo sa hawak mo ang huling itinapon, iwan ito at bumunot sa stock.</li><li>Kung may apat kang magkaparehong baraha, puwede mo itong ilapag nang nakataob bilang <b>secret</b>, at magbabayad agad sa iyo ng ₱50 ang bawat kalaban, manalo ka man o hindi. Ang tatlong kapareho ng sowee, kasama ang kahit anong ikaapat na baraha, ay secret din; pero kailangan pa ring bahagi ng kombinasyon ang ikaapat na iyon sa pagpanalo, kaya king ang karaniwang pinipili.</li><li>Magtapon ng isang baraha. <b>Hindi puwedeng itapon ang king</b>, at ang barahang kakakuha mo lang sa tapunan ay hindi muna puwedeng itapon hanggang sa susunod mong turn.</li></ol>',
+    '<ol><li>Bumunot sa stock, o kunin ang huling itinapon ng naunang manlalaro. Ang susunod lang sa turn ang puwedeng kumuha ng itinapon. Hindi ka puwedeng manalo gamit ang itinapon. Puwede mo pa ring kunin ang itinapon na bubuo sa hawak mo, kahit naka-purro ka, pero hindi ka mananalo rito: itatago mo ito at magtatapon ng ibang baraha.</li><li>Kung may apat kang magkaparehong baraha, puwede mo itong ilapag nang nakataob bilang <b>secret</b>, at magbabayad agad sa iyo ng ₱50 ang bawat kalaban, manalo ka man o hindi. Ang tatlong kapareho ng sowee, kasama ang kahit anong ikaapat na baraha, ay secret din; pero kailangan pa ring bahagi ng kombinasyon ang ikaapat na iyon sa pagpanalo, kaya king ang karaniwang pinipili.</li><li>Magtapon ng isang baraha. <b>Hindi puwedeng itapon ang king</b>, at ang barahang kakakuha mo lang sa tapunan ay hindi muna puwedeng itapon hanggang sa susunod mong turn.</li></ol>',
     '<h3>Mga kombinasyon</h3>',
     '<ul><li><b>Set</b>: tatlo o apat na magkaparehong numero na magkakaiba ang suit.</li><li><b>Run</b>: 3-4-5 o sota-caballo-rey sa iisang suit (hindi puwede ang as).</li><li><b>Pong</b>: tatlo o apat na magkaparehong-magkapareho na baraha (parehong numero at suit).</li><li><b>Secret</b>: apat na magkaparehong baraha na nakataob na inilapag.</li><li><b>King</b>: kombinasyon na ang isang king kahit mag-isa.</li></ul>',
     '<h3>Baksyo</h3>',
@@ -2299,7 +2299,7 @@
     '<tr><td>Apat na king na pareho ang suit</td><td>₱1,000</td></tr>',
     '<tr><td>Prinsesa, rub o 7 kings</td><td>₱500</td></tr>',
     '<tr><td>Panalo nang walang king, o iisa lang ang king</td><td>₱500</td></tr>',
-    '<tr><td><b>Singrey</b>: lahat ng king mo (2 hanggang 6) ay ginamit na baksyo sa sota-caballo-rey</td><td>₱500</td></tr>',
+    '<tr><td><b>Singrey</b>: lahat ng king mo, ilan man, ay kapares ng sota (10) at caballo (11) ng sarili nitong suit bilang baksyo</td><td>₱500</td></tr>',
     '<tr><td>Nanalo sa king na bumuo ng sota-caballo-rey na baksyo (hawak mo ang sota at caballo ng isang suit, at ang rey ng suit na iyon ang panalong baraha)</td><td>₱500</td></tr>',
     '<tr><td>Ibang panalo (2 hanggang 6 na king)</td><td>₱200</td></tr>',
     '<tr><th>Dagdag</th><th></th></tr>',

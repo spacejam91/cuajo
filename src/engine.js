@@ -502,8 +502,9 @@
     if (g.phase === 'draw' && g.turn === seat) {
       const top = topDiscard(g);
       a.drawStock = g.stock.length > 0;
-      // House rule: you only win with a card from the stock, so a discard that would complete your hand stays on the pile.
-      a.takeDiscard = top != null && g.stock.length > 0 && !completesWith(g, seat, cardType(top));
+      // House rule: you only win with a card from the stock. You may still take a discard that would complete your hand
+      // (even when purro); it does not win, and you keep it and discard a different card.
+      a.takeDiscard = top != null && g.stock.length > 0;
       a.endHand = g.stock.length === 0;
     } else if (g.phase === 'discard' && g.turn === seat) {
       a.discard = true;
@@ -561,7 +562,6 @@
     const top = topDiscard(g);
     assert(top != null, 'nothing to take');
     assert(g.stock.length > 0, 'the stock is empty');
-    assert(!completesWith(g, seat, cardType(top)), 'you can only win with a card from the stock, not with a discard');
     const id = g.discards.pop(); g.discardedBy.pop();
     for (let i = g.history.length - 1; i >= 0; i--) if (g.history[i].id === id) { g.history[i].takenBy = seat; break; }
     g.hands[seat].push(id); g.drawn = id; g.drawnFrom = 'discard'; g.phase = 'discard';
@@ -593,7 +593,8 @@
     // A secret is paid as soon as it is laid down, whether or not that player goes on to win the hand.
     for (const p of opponentsOf(seat)) { g.balances[p] -= SECRET_PAY; g.balances[seat] += SECRET_PAY; }
     log(g, g.names[seat] + ' lays down a secret' + (opt.kind === 'sowee' ? ' (the three cards matching the sowee, with a fourth card that still has to be melded)' : '') + ' and collects ' + money(SECRET_PAY) + ' from each opponent.', 'secret');
-    if (mayWin(g, seat) && isComplete(g, seat)) finishWin(g, seat, g.drawnFrom || 'deal', g.drawn, kingWin(g, seat) || undefined);
+    // a hand completed by a card taken from the discards does not win (house rule)
+    if (mayWin(g, seat) && g.drawnFrom !== 'discard' && isComplete(g, seat)) finishWin(g, seat, g.drawnFrom || 'deal', g.drawn, kingWin(g, seat) || undefined);
   }
 
   /** House rule: a card taken from the discards cannot be thrown back the same turn (nor an identical copy of it). */
@@ -722,7 +723,7 @@
     }
     // House rule (singrey): every king the player holds sits in a jack-horse-king run used as baksyo, also starts at 500.
     let singrey = false;
-    if (!special && kings >= 2 && sameKing < 3) {
+    if (!special && kings >= 1 && sameKing < 3) {
       const rest = pool.slice(), runs = []; let fits = true;
       for (let s = 0; s < 4 && fits; s++) {
         const K = typeOf(s, KING), J = typeOf(s, 4), H = typeOf(s, 5);
@@ -752,7 +753,7 @@
       if ((gp.kind === 'pong' || gp.kind === 'set') && r === ACE) { if (n >= 4) count.fourAces++; else count.threeAces++; }
       if (gp.kind === 'set' && r !== ACE && n >= 4) count.setOfFour++;
     }
-    const startKind = sameKing >= 4 ? 'fourKings' : special ? special : kings === 0 ? 'nokings' : kings === 1 ? 'oneking' : singrey ? 'singrey' : kingBaksyo ? 'kingBaksyo' : 'regular';
+    const startKind = sameKing >= 4 ? 'fourKings' : special ? special : kings === 0 ? 'nokings' : singrey ? 'singrey' : kings === 1 ? 'oneking' : kingBaksyo ? 'kingBaksyo' : 'regular';
     const start = sameKing >= 4 ? PRICE.fourKings : (special || kings <= 1 || kingBaksyo || singrey) ? PRICE.top : PRICE.regular;
     const items = [
       { key: 'kings', count: kings, each: PRICE.king },

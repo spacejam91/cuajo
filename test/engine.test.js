@@ -213,6 +213,10 @@ ok(wins + draws === NG, 'every hand ended');
   ok(C.isComplete(gp, 0) && C.kingWin(gp, 0) === null, 'singrey hand complete');
   pr = C.priceWin(gp, 0, null);
   ok(pr.start === 500 && pr.startKind === 'singrey' && pr.per === 500 + 2 * 5 + 2 * 10 + 5 + 5 + 5, 'singrey: two kings, each in its own sota-kabayo-hari, start at 500 = ' + pr.per);
+  // a single king paired with its jack and horse is singrey too
+  gp.hands[0] = ids([T(0,4), T(0,5), T(0,6), T(1,1), T(1,2), T(1,3), T(2,1), T(2,2), T(2,3), T(0,0), T(1,0), T(2,0), T(0,2), T(1,2), T(2,2), T(3,2)]);
+  pr = C.priceWin(gp, 0, null);
+  ok(pr.start === 500 && pr.startKind === 'singrey', 'one king in its own sota-kabayo-hari: singrey');
   // a third king standing alone spoils it
   gp.hands[0] = ids([T(0,4), T(0,5), T(0,6), T(1,4), T(1,5), T(1,6), T(2,1), T(2,2), T(2,3), T(0,0), T(1,0), T(2,0), T(3,6), T(1,2), T(2,2), T(3,2)]);
   ok(C.isComplete(gp, 0), 'hand with a lone third king complete');
@@ -301,13 +305,20 @@ ok(wins + draws === NG, 'every hand ended');
   g7.discards = [king]; g7.discardedBy = [0]; g7.stock = pool; g7.secrets = [[], [], [], []];
   g7.phase = 'draw'; g7.turn = 1; g7.purro = [false, true, false, false];
   ok(C.completesWith(g7, 1, T(0, 6)), 'the discarded king would complete seat 1');
-  ok(!C.legalActions(g7, 1).takeDiscard, 'a winning discard cannot be taken');
-  let threw = false; try { C.takeDiscard(g7, 1); } catch (x) { threw = true; }
-  ok(threw, 'taking a winning discard is refused');
-  ok(C.aiChooseDraw(g7, 1) === 'stock', 'the computer draws from the stock instead');
-  g7.stock = [];
-  ok(!C.legalActions(g7, 1).takeDiscard && C.legalActions(g7, 1).endHand, 'with the stock empty the hand just ends');
-  console.log('house rule checks: winning discards refused, computer draws instead');
+  ok(C.aiChooseDraw(g7, 1) === 'stock', 'the computer draws from the stock for a chance to win');
+  ok(C.legalActions(g7, 1).takeDiscard, 'a purro player may still take a discard that would complete the hand');
+  const snap7 = JSON.stringify(g7);
+  C.takeDiscard(g7, 1);
+  ok(g7.phase === 'discard' && g7.turn === 1 && !g7.result, 'taking it does not win: the player goes on to discard');
+  let threw = false; try { C.discard(g7, 1, king); } catch (x) { threw = true; }
+  ok(threw, 'the taken card cannot be thrown back');
+  const other = g7.hands[1].find(id => !C.isKing(id));
+  C.discard(g7, 1, other);
+  ok(g7.phase === 'draw' && g7.turn === 2 && g7.hands[1].length === 15, 'a different card is discarded and play moves on');
+  const g7b = JSON.parse(snap7);
+  g7b.stock = [];
+  ok(!C.legalActions(g7b, 1).takeDiscard && C.legalActions(g7b, 1).endHand, 'with the stock empty the hand just ends');
+  console.log('house rule checks: a winning discard can be taken but never wins');
 }
 // 8. special king wins: prinsesa (four kings, different suits), seven kings and rub (three of one king)
 {
